@@ -1,6 +1,6 @@
 {
   "name": "sbts-professional-railway-pilot",
-  "version": "1.3.0-railway-ready",
+  "version": "1.4.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
