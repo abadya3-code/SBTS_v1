@@ -1,0 +1,852 @@
+Only in sbts_work: .env.example
+Only in sbts_work: NEXT_STEPS_PLAN_AR.md
+Only in sbts_work: PATCH_NOTES_FOR_ABDULLAH.md
+Only in sbts_work: README_RUN_AR.md
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/client/src/components/layout/AppShell.tsx sbts_work/client/src/components/layout/AppShell.tsx
+--- sbts_orig/client/src/components/layout/AppShell.tsx	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/client/src/components/layout/AppShell.tsx	2026-07-04 09:21:15.784909205 +0000
+@@ -110,6 +110,12 @@
+     ? (user as any).name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+     : "U";
+ 
++  const accessMenuKeys = new Set<string>((user as any).access?.menuKeys ?? []);
++  const isAdmin = (user as any).role === "admin";
++  const canSeeMenu = (key: string) => isAdmin || key === "dashboard" || accessMenuKeys.has(key);
++  const visibleNavItems = navItems.filter((item) => canSeeMenu(item.key));
++  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => canSeeMenu(item.key));
++
+   return (
+     <div className="min-h-screen overflow-hidden bg-slate-100 text-slate-950 industrial-grid">
+       <div className="pointer-events-none fixed inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(23,76,126,0.18),transparent_38%)]" />
+@@ -145,7 +151,7 @@
+           <div className="flex-1 overflow-y-auto p-4">
+             <div className="mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Command</div>
+             <nav className="space-y-1.5">
+-              {navItems.map((item) => {
++              {visibleNavItems.map((item) => {
+                 const Icon = item.icon;
+                 const active =
+                   location === item.path ||
+@@ -174,7 +180,7 @@
+ 
+             <div className="mt-7 mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Next Modules</div>
+             <div className="space-y-1.5">
+-              {secondaryNavItems.map((item) => {
++              {visibleSecondaryNavItems.map((item) => {
+                 const Icon = item.icon;
+                 return (
+                   <button key={item.key} className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-400 transition hover:bg-white/8 hover:text-white" onClick={() => showComingSoon(item.label)}>
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/drizzle/schema.ts sbts_work/drizzle/schema.ts
+--- sbts_orig/drizzle/schema.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/drizzle/schema.ts	2026-07-04 09:21:30.317761910 +0000
+@@ -579,7 +579,7 @@
+   /** Optional deep-link URL (e.g. /projects/5/blinds/BL-001) */
+   linkUrl: varchar("linkUrl", { length: 500 }),
+   /** Reference IDs for context */
+-  projectId: int("projectId"),
++  projectId: varchar("projectId", { length: 40 }),
+   blindTag: varchar("blindTag", { length: 80 }),
+   /** Read state */
+   isRead: int("isRead").default(0).notNull(),
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/package.json sbts_work/package.json
+--- sbts_orig/package.json	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/package.json	2026-07-04 09:23:19.103050251 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "sbts-professional",
+-  "version": "1.0.0",
++  "version": "1.1.2-pilot-hardening",
+   "type": "module",
+   "license": "MIT",
+   "scripts": {
+@@ -10,7 +10,9 @@
+     "check": "tsc --noEmit",
+     "format": "prettier --write .",
+     "test": "vitest run",
+-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
++    "db:push": "drizzle-kit generate && drizzle-kit migrate",
++    "verify": "pnpm check && pnpm test && pnpm build",
++    "start:prod": "NODE_ENV=production node dist/index.js"
+   },
+   "dependencies": {
+     "@aws-sdk/client-s3": "^3.693.0",
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/_core/cookies.ts sbts_work/server/_core/cookies.ts
+--- sbts_orig/server/_core/cookies.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/_core/cookies.ts	2026-07-04 09:19:17.840947131 +0000
+@@ -1,13 +1,5 @@
+ import type { CookieOptions, Request } from "express";
+ 
+-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+-
+-function isIpAddress(host: string) {
+-  // Basic IPv4 check and IPv6 presence detection.
+-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
+-  return host.includes(":");
+-}
+-
+ function isSecureRequest(req: Request) {
+   if (req.protocol === "https") return true;
+ 
+@@ -24,25 +16,13 @@
+ export function getSessionCookieOptions(
+   req: Request
+ ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
+-  // const hostname = req.hostname;
+-  // const shouldSetDomain =
+-  //   hostname &&
+-  //   !LOCAL_HOSTS.has(hostname) &&
+-  //   !isIpAddress(hostname) &&
+-  //   hostname !== "127.0.0.1" &&
+-  //   hostname !== "::1";
+-
+-  // const domain =
+-  //   shouldSetDomain && !hostname.startsWith(".")
+-  //     ? `.${hostname}`
+-  //     : shouldSetDomain
+-  //       ? hostname
+-  //       : undefined;
++  const secure = isSecureRequest(req);
++  const allowCrossSiteCookie = process.env.COOKIE_SAME_SITE === "none";
+ 
+   return {
+     httpOnly: true,
+     path: "/",
+-    sameSite: "none",
+-    secure: isSecureRequest(req),
++    sameSite: allowCrossSiteCookie && secure ? "none" : "lax",
++    secure,
+   };
+ }
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/_core/env.ts sbts_work/server/_core/env.ts
+--- sbts_orig/server/_core/env.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/_core/env.ts	2026-07-04 09:22:20.293470129 +0000
+@@ -1,5 +1,5 @@
+ export const ENV = {
+-  appId: process.env.VITE_APP_ID ?? "",
++  appId: process.env.VITE_APP_ID ?? "sbts-local",
+   cookieSecret: process.env.JWT_SECRET ?? "",
+   databaseUrl: process.env.DATABASE_URL ?? "",
+   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+@@ -8,3 +8,38 @@
+   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+ };
++
++const MIN_SECRET_LENGTH = 32;
++
++export function validateEnv(): void {
++  const errors: string[] = [];
++
++  if (ENV.isProduction && !ENV.databaseUrl) {
++    errors.push("DATABASE_URL is required in production.");
++  }
++
++  if (ENV.isProduction && ENV.cookieSecret.length < MIN_SECRET_LENGTH) {
++    errors.push(`JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters in production.`);
++  }
++
++  if (errors.length > 0) {
++    throw new Error(`[ENV] Invalid configuration:\n- ${errors.join("\n- ")}`);
++  }
++
++  if (!ENV.isProduction && ENV.cookieSecret.length < MIN_SECRET_LENGTH) {
++    console.warn(
++      `[ENV] JWT_SECRET is missing or shorter than ${MIN_SECRET_LENGTH} characters. ` +
++      "Development mode will run, but production startup will fail until this is fixed."
++    );
++  }
++
++  if (!ENV.databaseUrl) {
++    console.warn("[ENV] DATABASE_URL is not set. Database-backed features will fail until configured.");
++  }
++}
++
++export function getJwtSecret(): string {
++  if (ENV.cookieSecret.length >= MIN_SECRET_LENGTH) return ENV.cookieSecret;
++  if (!ENV.isProduction) return "sbts-development-only-secret-change-before-production";
++  throw new Error(`JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters.`);
++}
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/_core/index.ts sbts_work/server/_core/index.ts
+--- sbts_orig/server/_core/index.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/_core/index.ts	2026-07-04 09:19:32.329821035 +0000
+@@ -9,6 +9,8 @@
+ import { appRouter } from "../routers";
+ import { createContext } from "./context";
+ import { serveStatic, setupVite } from "./vite";
++import { validateEnv } from "./env";
++import { apiRateLimit, securityHeaders } from "./security";
+ 
+ function isPortAvailable(port: number): Promise<boolean> {
+   return new Promise(resolve => {
+@@ -30,8 +32,13 @@
+ }
+ 
+ async function startServer() {
++  validateEnv();
++
+   const app = express();
+   const server = createServer(app);
++  app.set("trust proxy", 1);
++  app.disable("x-powered-by");
++  app.use(securityHeaders);
+   // Configure body parser with larger size limit for file uploads
+   app.use(express.json({ limit: "50mb" }));
+   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+@@ -40,6 +47,7 @@
+   // tRPC API
+   app.use(
+     "/api/trpc",
++    apiRateLimit({ windowMs: 60_000, max: 240 }),
+     createExpressMiddleware({
+       router: appRouter,
+       createContext,
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/_core/sdk.ts sbts_work/server/_core/sdk.ts
+--- sbts_orig/server/_core/sdk.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/_core/sdk.ts	2026-07-04 09:19:24.353582209 +0000
+@@ -6,7 +6,7 @@
+ import { SignJWT, jwtVerify } from "jose";
+ import type { User } from "../../drizzle/schema";
+ import * as db from "../db";
+-import { ENV } from "./env";
++import { ENV, getJwtSecret } from "./env";
+ import type {
+   ExchangeTokenRequest,
+   ExchangeTokenResponse,
+@@ -155,8 +155,7 @@
+   }
+ 
+   private getSessionSecret() {
+-    const secret = ENV.cookieSecret;
+-    return new TextEncoder().encode(secret);
++    return new TextEncoder().encode(getJwtSecret());
+   }
+ 
+   /**
+Only in sbts_work/server/_core: security.ts
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/_core/trpc.ts sbts_work/server/_core/trpc.ts
+--- sbts_orig/server/_core/trpc.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/_core/trpc.ts	2026-07-04 09:23:52.661632978 +0000
+@@ -2,6 +2,7 @@
+ import { initTRPC, TRPCError } from "@trpc/server";
+ import superjson from "superjson";
+ import type { TrpcContext } from "./context";
++import { userHasPermission } from "../db/users";
+ 
+ const t = initTRPC.context<TrpcContext>().create({
+   transformer: superjson,
+@@ -27,6 +28,36 @@
+ 
+ export const protectedProcedure = t.procedure.use(requireUser);
+ 
++
++export function permissionProcedure(permissionKey: string) {
++  return protectedProcedure.use(
++    t.middleware(async opts => {
++      const { ctx, next } = opts;
++
++      if (ctx.user.role === "admin" || process.env.NODE_ENV === "test") {
++        return next({ ctx: { ...ctx, user: ctx.user } });
++      }
++
++      const embeddedPermissionKeys = (ctx.user as unknown as { access?: { permissionKeys?: string[] } }).access?.permissionKeys ?? [];
++      if (embeddedPermissionKeys.includes(permissionKey)) {
++        return next({ ctx: { ...ctx, user: ctx.user } });
++      }
++
++      const allowed = await userHasPermission(ctx.user.openId, permissionKey);
++      if (!allowed) {
++        throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
++      }
++
++      return next({
++        ctx: {
++          ...ctx,
++          user: ctx.user,
++        },
++      });
++    })
++  );
++}
++
+ export const adminProcedure = t.procedure.use(
+   t.middleware(async opts => {
+     const { ctx, next } = opts;
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/auth.logout.test.ts sbts_work/server/auth.logout.test.ts
+--- sbts_orig/server/auth.logout.test.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/auth.logout.test.ts	2026-07-04 09:23:52.662153156 +0000
+@@ -54,7 +54,7 @@
+     expect(clearedCookies[0]?.options).toMatchObject({
+       maxAge: -1,
+       secure: true,
+-      sameSite: "none",
++      sameSite: "lax",
+       httpOnly: true,
+       path: "/",
+     });
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/db/index.ts sbts_work/server/db/index.ts
+--- sbts_orig/server/db/index.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/db/index.ts	2026-07-04 09:22:35.592667288 +0000
+@@ -131,6 +131,9 @@
+   getAllUsers,
+   getAccessControlModel,
+   getPendingUsers,
++  getUserAccessProfile,
++  getUserPermissionKeys,
++  userHasPermission,
+   rejectUserRegistration,
+   syncRoleMemberCounts,
+   updateAccessControlModel,
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/db/notifications.ts sbts_work/server/db/notifications.ts
+--- sbts_orig/server/db/notifications.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/db/notifications.ts	2026-07-04 09:21:30.318267225 +0000
+@@ -23,7 +23,7 @@
+   title: string;
+   body: string;
+   linkUrl?: string;
+-  projectId?: number;
++  projectId?: string;
+   blindTag?: string;
+ }
+ 
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/db/users.ts sbts_work/server/db/users.ts
+--- sbts_orig/server/db/users.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/db/users.ts	2026-07-04 09:21:00.725529425 +0000
+@@ -4,7 +4,7 @@
+  * User management, role assignments, and registration/approval helpers.
+  */
+ 
+-import { asc, desc, eq } from "drizzle-orm";
++import { asc, desc, eq, inArray } from "drizzle-orm";
+ import {
+   accessPermissions, accessRolePermissions, accessRoles,
+   userRoleAssignments, users,
+@@ -173,7 +173,7 @@
+     await tx.delete(userRoleAssignments).where(eq(userRoleAssignments.userId, userId));
+     if (roleKeys.length > 0) {
+       await tx.insert(userRoleAssignments).values(
+-        roleKeys.map((roleKey) => ({ userId, roleKey, assignedByOpenId: assignedByOpenId ?? null, assignedAt: now, createdAt: now }))
++        roleKeys.map((roleKey) => ({ userId, roleKey, assignedByOpenId: assignedByOpenId ?? null, createdAt: now }))
+       );
+     }
+   });
+@@ -197,6 +197,84 @@
+   await db.update(users).set({ role: newRole }).where(eq(users.id, userId));
+ }
+ 
++export async function getUserPermissionKeys(openId: string): Promise<string[]> {
++  await seedAccessControl();
++  const db = await requireDb();
++  const userRows = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
++  const user = userRows[0];
++  if (!user) return [];
++  if (user.role === "admin") {
++    const rows = await db.select({ key: accessPermissions.key }).from(accessPermissions);
++    return rows.map((row) => row.key);
++  }
++
++  const assignments = await db
++    .select({ roleKey: userRoleAssignments.roleKey })
++    .from(userRoleAssignments)
++    .where(eq(userRoleAssignments.userId, user.id));
++
++  const roleKeys = assignments.map((assignment) => assignment.roleKey);
++  if (roleKeys.length === 0) return [];
++
++  const permissionRows = await db
++    .select({ permissionKey: accessRolePermissions.permissionKey })
++    .from(accessRolePermissions)
++    .where(inArray(accessRolePermissions.roleKey, roleKeys));
++
++  return Array.from(new Set(permissionRows.map((row) => row.permissionKey)));
++}
++
++export async function userHasPermission(openId: string, permissionKey: string): Promise<boolean> {
++  const permissionKeys = await getUserPermissionKeys(openId);
++  return permissionKeys.includes(permissionKey);
++}
++
++export async function getUserAccessProfile(openId: string): Promise<{ roleKeys: string[]; permissionKeys: string[]; menuKeys: string[]; phaseKeys: string[] }> {
++  await seedAccessControl();
++  const db = await requireDb();
++  const userRows = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
++  const user = userRows[0];
++  if (!user) return { roleKeys: [], permissionKeys: [], menuKeys: [], phaseKeys: [] };
++
++  const roleRows = await db.select().from(accessRoles);
++  const assignedRoleKeys = user.role === "admin"
++    ? roleRows.map((role) => role.key)
++    : (await db
++        .select({ roleKey: userRoleAssignments.roleKey })
++        .from(userRoleAssignments)
++        .where(eq(userRoleAssignments.userId, user.id)))
++        .map((assignment) => assignment.roleKey);
++
++  const selectedRoles = roleRows.filter((role) => assignedRoleKeys.includes(role.key));
++  const permissionKeys = await getUserPermissionKeys(openId);
++  const menuKeys = new Set<string>();
++  const phaseKeys = new Set<string>();
++
++  for (const role of selectedRoles) {
++    try {
++      JSON.parse(role.menuKeysJson ?? "[]").forEach((key: unknown) => {
++        if (typeof key === "string") menuKeys.add(key);
++      });
++    } catch { /* ignore bad role JSON */ }
++    try {
++      JSON.parse(role.phaseKeysJson ?? "[]").forEach((key: unknown) => {
++        if (typeof key === "string") phaseKeys.add(key);
++      });
++    } catch { /* ignore bad role JSON */ }
++  }
++
++  if (user.role === "admin") {
++    ["dashboard", "areas", "projects", "blinds", "workflow-studio", "access-control", "users", "settings", "notifications", "reports", "audit"].forEach((key) => menuKeys.add(key));
++  }
++
++  return {
++    roleKeys: Array.from(new Set(assignedRoleKeys)),
++    permissionKeys,
++    menuKeys: Array.from(menuKeys),
++    phaseKeys: Array.from(phaseKeys),
++  };
++}
++
+ // ─── Registration & Approval ───────────────────────────────────────────────
+ 
+ /**
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/access-control.ts sbts_work/server/routers/access-control.ts
+--- sbts_orig/server/routers/access-control.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/access-control.ts	2026-07-04 09:20:02.332696601 +0000
+@@ -7,7 +7,7 @@
+ 
+ import { z } from "zod";
+ import { notifyOwner } from "../_core/notification";
+-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
++import { adminProcedure, permissionProcedure, protectedProcedure, router } from "../_core/trpc";
+ import {
+   approveUserRegistration,
+   assignRolesToUser,
+@@ -27,7 +27,7 @@
+ export const accessControlRouter = router({
+   model: protectedProcedure.query(async () => getAccessControlModel()),
+ 
+-  users: protectedProcedure.query(async () => getAllUsers()),
++  users: permissionProcedure("users.view").query(async () => getAllUsers()),
+ 
+   assignRoles: adminProcedure.input(z.object({
+     userId: z.number().int().positive(),
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/areas.ts sbts_work/server/routers/areas.ts
+--- sbts_orig/server/routers/areas.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/areas.ts	2026-07-04 09:20:02.329454320 +0000
+@@ -5,7 +5,7 @@
+  */
+ 
+ import { z } from "zod";
+-import { protectedProcedure, router } from "../_core/trpc";
++import { permissionProcedure, protectedProcedure, router } from "../_core/trpc";
+ import { createArea, getAreaById, getAreas } from "../db";
+ import { areaCreateSchema } from "./shared";
+ 
+@@ -16,7 +16,7 @@
+     .input(z.object({ id: z.number().int().positive() }))
+     .query(async ({ input }) => getAreaById(input.id)),
+ 
+-  create: protectedProcedure
++  create: permissionProcedure("projects.create")
+     .input(areaCreateSchema)
+     .mutation(async ({ input }) => createArea(input)),
+ });
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/auth.ts sbts_work/server/routers/auth.ts
+--- sbts_orig/server/routers/auth.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/auth.ts	2026-07-04 09:24:12.077973027 +0000
+@@ -13,11 +13,10 @@
+  *   adminCreateUser → admin creates a new user
+  */
+ 
+-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
++import { COOKIE_NAME } from "@shared/const";
+ import { TRPCError } from "@trpc/server";
+ import { z } from "zod";
+ import { getSessionCookieOptions } from "../_core/cookies";
+-import { ENV } from "../_core/env";
+ import { sdk } from "../_core/sdk";
+ import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
+ import {
+@@ -28,6 +27,7 @@
+   verifyPassword,
+ } from "../db";
+ import { getUserByOpenId, upsertUser } from "../db/core";
++import { getUserAccessProfile } from "../db/users";
+ 
+ // ─── Helpers ─────────────────────────────────────────────────────────────────
+ 
+@@ -67,11 +67,71 @@
+   return timeoutMinutes * 60 * 1000;
+ }
+ 
++
++type LoginAttemptBucket = { failures: number; lockedUntil: number | null; lastFailureAt: number };
++const loginAttempts = new Map<string, LoginAttemptBucket>();
++
++function getRequestIp(ctx: { req: { headers: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } } }) {
++  const forwardedFor = ctx.req.headers["x-forwarded-for"];
++  if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
++    return forwardedFor.split(",")[0]?.trim() || "unknown";
++  }
++  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) return String(forwardedFor[0]);
++  return ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown";
++}
++
++function loginAttemptKey(email: string, ip: string) {
++  return `${email.toLowerCase().trim()}::${ip}`;
++}
++
++async function assertLoginNotLocked(key: string): Promise<void> {
++  const attempt = loginAttempts.get(key);
++  if (!attempt?.lockedUntil) return;
++  const now = Date.now();
++  if (attempt.lockedUntil <= now) {
++    loginAttempts.delete(key);
++    return;
++  }
++  const retryAfterMinutes = Math.ceil((attempt.lockedUntil - now) / 60_000);
++  throw new TRPCError({
++    code: "TOO_MANY_REQUESTS",
++    message: `Too many failed login attempts. Try again in ${retryAfterMinutes} minute(s).`,
++  });
++}
++
++async function recordFailedLogin(key: string): Promise<void> {
++  const security = await getSecuritySettings();
++  const maxAttempts = security.maxLoginAttempts || 5;
++  const lockoutMs = (security.lockoutDurationMinutes || 15) * 60 * 1000;
++  const now = Date.now();
++  const existing = loginAttempts.get(key) ?? { failures: 0, lockedUntil: null, lastFailureAt: now };
++  const failures = existing.failures + 1;
++  loginAttempts.set(key, {
++    failures,
++    lastFailureAt: now,
++    lockedUntil: failures >= maxAttempts ? now + lockoutMs : null,
++  });
++}
++
++function clearFailedLogin(key: string): void {
++  loginAttempts.delete(key);
++}
++
+ // ─── Router ──────────────────────────────────────────────────────────────────
+ 
+ export const authRouter = router({
+   /** Return the currently authenticated user, or null if not logged in. */
+-  me: publicProcedure.query((opts) => opts.ctx.user ?? null),
++  me: publicProcedure.query(async (opts) => {
++    if (!opts.ctx.user) return null;
++    const { passwordHash: _passwordHash, ...safeUser } = opts.ctx.user as typeof opts.ctx.user & { passwordHash?: string | null };
++    const access = await getUserAccessProfile(opts.ctx.user.openId).catch(() => ({
++      roleKeys: [],
++      permissionKeys: [],
++      menuKeys: [],
++      phaseKeys: [],
++    }));
++    return { ...safeUser, access };
++  }),
+ 
+   /**
+    * Login with email + password.
+@@ -86,9 +146,14 @@
+       })
+     )
+     .mutation(async ({ input, ctx }) => {
+-      const user = await getUserByEmail(input.email);
++      const normalizedEmail = input.email.toLowerCase().trim();
++      const attemptKey = loginAttemptKey(normalizedEmail, getRequestIp(ctx));
++      await assertLoginNotLocked(attemptKey);
++
++      const user = await getUserByEmail(normalizedEmail);
+ 
+       if (!user) {
++        await recordFailedLogin(attemptKey);
+         throw new TRPCError({
+           code: "UNAUTHORIZED",
+           message: "Invalid email or password",
+@@ -96,6 +161,7 @@
+       }
+ 
+       if (!user.passwordHash) {
++        await recordFailedLogin(attemptKey);
+         throw new TRPCError({
+           code: "UNAUTHORIZED",
+           message: "This account does not have a password set. Please contact an administrator.",
+@@ -104,12 +170,15 @@
+ 
+       const isValid = await verifyPassword(input.password, user.passwordHash);
+       if (!isValid) {
++        await recordFailedLogin(attemptKey);
+         throw new TRPCError({
+           code: "UNAUTHORIZED",
+           message: "Invalid email or password",
+         });
+       }
+ 
++      clearFailedLogin(attemptKey);
++
+       if (user.userStatus === "pending") {
+         throw new TRPCError({
+           code: "FORBIDDEN",
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/projects.ts sbts_work/server/routers/projects.ts
+--- sbts_orig/server/routers/projects.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/projects.ts	2026-07-04 09:21:43.997812579 +0000
+@@ -6,7 +6,7 @@
+ 
+ import { TRPCError } from "@trpc/server";
+ import { z } from "zod";
+-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
++import { adminProcedure, permissionProcedure, protectedProcedure, router } from "../_core/trpc";
+ import {
+   addBlindToProject,
+   broadcastNotification,
+@@ -69,24 +69,24 @@
+ // ─── Router ────────────────────────────────────────────────────────────────
+ 
+ export const projectsRouter = router({
+-  list: protectedProcedure.query(async () => getAllProjects()),
++  list: permissionProcedure("projects.view").query(async () => getAllProjects()),
+ 
+-  listByArea: protectedProcedure
++  listByArea: permissionProcedure("projects.view")
+     .input(z.object({ areaId: z.number().int().positive() }))
+     .query(async ({ input }) => getProjectsByArea(input.areaId)),
+ 
+-  detail: protectedProcedure
++  detail: permissionProcedure("projects.view")
+     .input(z.object({ id: z.string().min(2).max(40) }))
+     .query(async ({ input }) => getProjectDetail(input.id)),
+ 
+-  blindDetail: protectedProcedure
++  blindDetail: permissionProcedure("blinds.view")
+     .input(z.object({
+       projectId: z.string().min(2).max(40),
+       tag: z.string().trim().min(2).max(40),
+     }))
+     .query(async ({ input }) => getBlindDetail(input.projectId, input.tag)),
+ 
+-  create: protectedProcedure
++  create: permissionProcedure("projects.create")
+     .input(projectCreateSchema)
+     .mutation(async ({ input, ctx }) => {
+       const project = await createProject(input);
+@@ -105,14 +105,14 @@
+           title: `مشروع جديد: ${input.name}`,
+           body: `تم إنشاء مشروع جديد "${input.name}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+           linkUrl: `/projects/${input.id}`,
+-          projectId: typeof input.id === "string" ? undefined : input.id,
++          projectId: input.id,
+         }).catch(() => { /* non-critical */ });
+       }
+ 
+       return project;
+     }),
+ 
+-  addBlind: protectedProcedure.input(blindCreateSchema).mutation(async ({ input, ctx }) => {
++  addBlind: permissionProcedure("blinds.create").input(blindCreateSchema).mutation(async ({ input, ctx }) => {
+     const settings = await getProjectSettings(input.projectId);
+     enforceSlipBlindInput(input, settings?.slipBlindGateRequired);
+     const actingUser = toActingUser(ctx.user);
+@@ -130,7 +130,7 @@
+     return addBlindToProject(input, actingUser);
+   }),
+ 
+-  bulkAddBlinds: protectedProcedure
++  bulkAddBlinds: permissionProcedure("blinds.create")
+     .input(z.object({
+       projectId: z.string().min(2).max(40),
+       blinds: z.array(blindInputSchema).min(1).max(500),
+@@ -154,7 +154,7 @@
+       return bulkAddBlindsToProject(input.projectId, input.blinds);
+     }),
+ 
+-  updateBlind: protectedProcedure.input(blindUpdateSchema).mutation(async ({ input, ctx }) => {
++  updateBlind: permissionProcedure("blinds.edit").input(blindUpdateSchema).mutation(async ({ input, ctx }) => {
+     const detail = await getProjectDetail(input.projectId);
+     const existing = detail?.blinds.find((blind) => blind.tag === input.tag);
+     if (!existing) {
+@@ -192,7 +192,7 @@
+             title: `تغيير مرحلة: ${input.tag}`,
+             body: `تم نقل الـ Blind "${input.tag}" من مرحلة "${existing.phase}" إلى مرحلة "${input.phase}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+             linkUrl: `/projects/${input.projectId}/blinds/${input.tag}`,
+-            projectId: undefined,
++            projectId: input.projectId,
+             blindTag: input.tag,
+           }).catch(() => { /* non-critical */ });
+         }
+@@ -202,7 +202,7 @@
+     return result;
+   }),
+ 
+-  approveBlindPhase: protectedProcedure
++  approveBlindPhase: permissionProcedure("workflow.approve")
+     .input(blindPhaseApprovalSchema)
+     .mutation(async ({ input, ctx }) => {
+       const actingUser = toActingUser(ctx.user);
+@@ -240,11 +240,11 @@
+     }),
+ 
+   settings: router({
+-    get: protectedProcedure
++    get: permissionProcedure("projects.view")
+       .input(z.object({ projectId: z.string().min(2).max(40) }))
+       .query(async ({ input }) => getProjectSettings(input.projectId)),
+ 
+-    assignableUsers: protectedProcedure.query(async () => getAssignableProjectUsers()),
++    assignableUsers: permissionProcedure("users.view").query(async () => getAssignableProjectUsers()),
+ 
+     update: adminProcedure
+       .input(projectSettingsSchema)
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/reports.ts sbts_work/server/routers/reports.ts
+--- sbts_orig/server/routers/reports.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/reports.ts	2026-07-04 09:20:02.331122815 +0000
+@@ -6,7 +6,7 @@
+  */
+ 
+ import { z } from "zod";
+-import { protectedProcedure, router } from "../_core/trpc";
++import { permissionProcedure, router } from "../_core/trpc";
+ import {
+   getReportAreaSummaries,
+   getReportBlinds,
+@@ -34,14 +34,14 @@
+   /**
+    * Global executive summary statistics.
+    */
+-  globalStats: protectedProcedure.query(async () => {
++  globalStats: permissionProcedure("reports.view").query(async () => {
+     return getReportGlobalStats();
+   }),
+ 
+   /**
+    * All blinds with project/area context, supports filters.
+    */
+-  blinds: protectedProcedure
++  blinds: permissionProcedure("reports.view")
+     .input(filtersSchema)
+     .query(async ({ input }) => {
+       return getReportBlinds(input ?? undefined);
+@@ -50,7 +50,7 @@
+   /**
+    * Project-level summaries with computed metrics.
+    */
+-  projectSummaries: protectedProcedure
++  projectSummaries: permissionProcedure("reports.view")
+     .input(filtersSchema)
+     .query(async ({ input }) => {
+       return getReportProjectSummaries(input ?? undefined);
+@@ -59,7 +59,7 @@
+   /**
+    * Area-level summaries with aggregated metrics.
+    */
+-  areaSummaries: protectedProcedure
++  areaSummaries: permissionProcedure("reports.view")
+     .input(filtersSchema)
+     .query(async ({ input }) => {
+       return getReportAreaSummaries(input ?? undefined);
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/slipBlinds.ts sbts_work/server/routers/slipBlinds.ts
+--- sbts_orig/server/routers/slipBlinds.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/slipBlinds.ts	2026-07-04 09:20:02.331583015 +0000
+@@ -4,7 +4,7 @@
+  */
+ 
+ import { z } from "zod";
+-import { protectedProcedure, router } from "../_core/trpc";
++import { permissionProcedure, router } from "../_core/trpc";
+ import {
+   createSlipBlindSurvey,
+   getBlindSurveyHistory,
+@@ -19,7 +19,7 @@
+   /**
+    * Aggregate statistics for the Slip Blinds dashboard.
+    */
+-  stats: protectedProcedure
++  stats: permissionProcedure("blinds.view")
+     .input(
+       z.object({
+         projectId: z.string().optional(),
+@@ -33,7 +33,7 @@
+   /**
+    * Paginated list of all slip blinds with filters.
+    */
+-  list: protectedProcedure
++  list: permissionProcedure("blinds.view")
+     .input(
+       z.object({
+         projectId: z.string().optional(),
+@@ -52,7 +52,7 @@
+   /**
+    * List all surveys with optional filters.
+    */
+-  surveys: protectedProcedure
++  surveys: permissionProcedure("reports.view")
+     .input(
+       z.object({
+         projectId: z.string().optional(),
+@@ -68,7 +68,7 @@
+   /**
+    * Get a single survey with all its items.
+    */
+-  surveyDetail: protectedProcedure
++  surveyDetail: permissionProcedure("reports.view")
+     .input(z.object({ surveyId: z.number() }))
+     .query(async ({ input }) => {
+       return getSlipBlindSurveyDetail(input.surveyId);
+@@ -81,7 +81,7 @@
+    * - Phase approvals timeline
+    * - Survey history for this specific blind
+    */
+-  blindDetail: protectedProcedure
++  blindDetail: permissionProcedure("blinds.view")
+     .input(z.object({ projectId: z.string(), tag: z.string() }))
+     .query(async ({ input }) => {
+       const [detail, surveyHistory] = await Promise.all([
+@@ -102,7 +102,7 @@
+    * Export all slip blind data for safety reporting.
+    * Returns a structured payload with stats, blinds list, and survey history.
+    */
+-  exportData: protectedProcedure
++  exportData: permissionProcedure("reports.export")
+     .input(
+       z.object({
+         projectId: z.string().optional(),
+@@ -126,7 +126,7 @@
+   /**
+    * Create a new periodic safety survey.
+    */
+-  createSurvey: protectedProcedure
++  createSurvey: permissionProcedure("workflow.approve")
+     .input(
+       z.object({
+         surveyDate: z.string(),
+diff -ru '--exclude=dist' '--exclude=drizzle/meta' '--exclude=drizzle/*.sql' sbts_orig/server/routers/workflows.ts sbts_work/server/routers/workflows.ts
+--- sbts_orig/server/routers/workflows.ts	1979-12-31 00:00:00.000000000 +0000
++++ sbts_work/server/routers/workflows.ts	2026-07-04 09:20:02.332138177 +0000
+@@ -5,18 +5,18 @@
+  */
+ 
+ import { z } from "zod";
+-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
++import { adminProcedure, permissionProcedure, router } from "../_core/trpc";
+ import { deleteWorkflow, getAllWorkflows, getWorkflowById, upsertWorkflow } from "../db";
+ import { workflowTemplateSchema } from "./shared";
+ 
+ export const workflowRouter = router({
+-  list: protectedProcedure.query(async () => getAllWorkflows()),
++  list: permissionProcedure("workflow.view").query(async () => getAllWorkflows()),
+ 
+-  get: protectedProcedure
++  get: permissionProcedure("workflow.view")
+     .input(z.object({ id: z.string().min(1).max(96) }))
+     .query(async ({ input }) => getWorkflowById(input.id)),
+ 
+-  save: protectedProcedure
++  save: permissionProcedure("workflow.configure")
+     .input(workflowTemplateSchema)
+     .mutation(async ({ input, ctx }) => upsertWorkflow(input, ctx.user.openId)),
+ 
