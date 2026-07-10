@@ -4,16 +4,25 @@ The shell behaves like an operations room frame: stable navigation, strong conte
 */
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, Loader2, LogOut, Menu, Search, ShieldCheck, X } from "lucide-react";
+import {
+  ChevronDown,
+  Loader2,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { appMeta, navItems, secondaryNavItems } from "@/lib/mockData";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { useTheme } from "@/contexts/ThemeContext";
 
-const heroUrl = "https://d2xsxph8kpxj0f.cloudfront.net/95256836/T9nk6A5dkk7H7GaCBwTuhX/sbts-command-center-hero-UhGNvmibStQht4VPE3rmFJ.webp";
+const heroUrl =
+  "https://d2xsxph8kpxj0f.cloudfront.net/95256836/T9nk6A5dkk7H7GaCBwTuhX/sbts-command-center-hero-UhGNvmibStQht4VPE3rmFJ.webp";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -37,7 +46,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     } else if (pref === "light") {
       setIsDarkMode(false);
     } else if (pref === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
       setIsDarkMode(prefersDark);
     }
     // Named themes stored directly
@@ -49,8 +60,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Load dynamic settings
   const { data: generalSettings } = trpc.settings.general.get.useQuery();
   const dynamicAppName = (generalSettings as any)?.appName || appMeta.title;
-  const dynamicVersion = (generalSettings as any)?.versionName || appMeta.version;
-  const dynamicCompanyName = (generalSettings as any)?.companyName || appMeta.site;
+  const dynamicVersion =
+    (generalSettings as any)?.versionName || appMeta.version;
+  const dynamicCompanyName =
+    (generalSettings as any)?.companyName || appMeta.site;
+  const dynamicSubtitle =
+    (generalSettings as any)?.appDescription || appMeta.subtitle;
+  const dynamicLogoUrl =
+    (generalSettings as any)?.companyLogoUrl ||
+    (generalSettings as any)?.appImageUrl ||
+    "";
 
   // Auth guard: redirect unauthenticated or non-active users
   useEffect(() => {
@@ -85,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pendingCount = pendingQuery.data?.length ?? 0;
 
   const showComingSoon = (label: string) => {
-    toast.info(`${label} — قريباً`);
+    toast.info(`${label} — coming soon`);
   };
 
   const handleLogout = () => {
@@ -98,7 +117,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-cyan-400" />
-          <p className="text-slate-400 text-sm tracking-widest uppercase">جاري التحقق من الصلاحيات...</p>
+          <p className="text-slate-400 text-sm tracking-widest uppercase">
+            Checking access permissions...
+          </p>
         </div>
       </div>
     );
@@ -107,17 +128,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   const userInitials = (user as any).name
-    ? (user as any).name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    ? (user as any).name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
     : "U";
 
   const accessMenuKeys = new Set<string>((user as any).access?.menuKeys ?? []);
   const isAdmin = (user as any).role === "admin";
-  const canSeeMenu = (key: string) => isAdmin || key === "dashboard" || accessMenuKeys.has(key);
-  const visibleNavItems = navItems.filter((item) => canSeeMenu(item.key));
-  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => canSeeMenu(item.key));
+  const canSeeMenu = (key: string) =>
+    isAdmin || key === "dashboard" || accessMenuKeys.has(key);
+  const visibleNavItems = navItems.filter(item => canSeeMenu(item.key));
+  const visibleSecondaryNavItems = secondaryNavItems.filter(item =>
+    canSeeMenu(item.key)
+  );
 
   return (
-    <div className="min-h-screen overflow-hidden bg-slate-100 text-slate-950 industrial-grid">
+    <div className="min-h-screen overflow-hidden bg-slate-100 text-slate-950 industrial-grid dark:bg-slate-950 dark:text-slate-100">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(23,76,126,0.18),transparent_38%)]" />
 
       {mobileOpen && (
@@ -128,36 +157,69 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[290px] transform border-r border-white/10 bg-sidebar text-sidebar-foreground shadow-2xl transition-transform duration-200 lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[290px] transform border-r border-white/10 bg-sidebar text-sidebar-foreground shadow-2xl transition-transform duration-200 lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="flex h-full flex-col">
           <div className="relative overflow-hidden border-b border-white/10 p-5">
-            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `url(${heroUrl})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+            <div
+              className="absolute inset-0 opacity-40"
+              style={{
+                backgroundImage: `url(${heroUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            />
             <div className="relative flex items-center justify-between gap-3">
-              <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3"
+              >
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-300/15 ring-1 ring-cyan-200/25">
-                  <ShieldCheck className="h-6 w-6 text-cyan-200" />
+                  {dynamicLogoUrl ? (
+                    <img
+                      src={dynamicLogoUrl}
+                      alt="Company logo"
+                      className="h-7 w-7 object-contain"
+                    />
+                  ) : (
+                    <ShieldCheck className="h-6 w-6 text-cyan-200" />
+                  )}
                 </div>
-                <div>
-<div className="text-base font-extrabold tracking-tight">{dynamicAppName}</div>
-                   <div className="text-xs font-medium text-slate-300">{dynamicCompanyName}</div>
+                <div className="min-w-0">
+                  <div className="truncate text-base font-extrabold tracking-tight">
+                    {dynamicAppName}
+                  </div>
+                  <div className="truncate text-xs font-medium text-slate-300">
+                    {dynamicCompanyName}
+                  </div>
                 </div>
               </Link>
-              <button className="rounded-xl p-2 text-slate-300 hover:bg-white/10 lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Close sidebar">
+              <button
+                className="rounded-xl p-2 text-slate-300 hover:bg-white/10 lg:hidden"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close sidebar"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Command</div>
+            <div className="mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+              Command
+            </div>
             <nav className="space-y-1.5">
-              {visibleNavItems.map((item) => {
+              {visibleNavItems.map(item => {
                 const Icon = item.icon;
                 const active =
                   location === item.path ||
                   (location === "/" && item.path === "/dashboard") ||
-                  (item.path !== "/dashboard" && location.startsWith(`${item.path}/`)) ||
-                  (item.path === "/projects" && /^\/areas\/[^/]+\/projects(\/.*)?$/.test(location));
+                  (item.path !== "/dashboard" &&
+                    location.startsWith(`${item.path}/`)) ||
+                  (item.path === "/projects" &&
+                    /^\/areas\/[^/]+\/projects(\/.*)?$/.test(location));
                 return (
                   <Link
                     key={item.key}
@@ -165,7 +227,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                     onClick={() => setMobileOpen(false)}
                     className={`group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${active ? "bg-cyan-300/15 text-white shadow-[inset_3px_0_0_rgba(103,232,249,0.9)]" : "text-slate-300 hover:bg-white/8 hover:text-white"}`}
                   >
-                    <Icon className={`h-5 w-5 ${active ? "text-cyan-200" : "text-slate-400 group-hover:text-cyan-200"}`} />
+                    <Icon
+                      className={`h-5 w-5 ${active ? "text-cyan-200" : "text-slate-400 group-hover:text-cyan-200"}`}
+                    />
                     <span>{item.label}</span>
                     {/* Pending users badge on Users nav item */}
                     {item.key === "users" && pendingCount > 0 && (
@@ -178,12 +242,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-            <div className="mt-7 mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Next Modules</div>
+            <div className="mt-7 mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+              Next Modules
+            </div>
             <div className="space-y-1.5">
-              {visibleSecondaryNavItems.map((item) => {
+              {visibleSecondaryNavItems.map(item => {
                 const Icon = item.icon;
                 return (
-                  <button key={item.key} className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-400 transition hover:bg-white/8 hover:text-white" onClick={() => showComingSoon(item.label)}>
+                  <button
+                    key={item.key}
+                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-400 transition hover:bg-white/8 hover:text-white"
+                    onClick={() => showComingSoon(item.label)}
+                  >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </button>
@@ -202,26 +272,38 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-xl hover:bg-white/10 transition p-1 -m-1"
                 >
                   {(user as any).avatarUrl ? (
-                    <img src={(user as any).avatarUrl} alt="Avatar" className="h-10 w-10 rounded-xl object-cover ring-2 ring-cyan-400/30" />
+                    <img
+                      src={(user as any).avatarUrl}
+                      alt="Avatar"
+                      className="h-10 w-10 rounded-xl object-cover ring-2 ring-cyan-400/30"
+                    />
                   ) : (
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-200 text-sm font-extrabold text-slate-950">
                       {userInitials}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold">{(user as any).name ?? "مستخدم"}</div>
+                    <div className="truncate text-sm font-bold">
+                      {(user as any).name ?? "User"}
+                    </div>
                     <div className="truncate text-xs text-slate-400">
-                      {user.role === "admin" ? "مسؤول النظام" : (user as any).specialty ?? "مستخدم"}
+                      {user.role === "admin"
+                        ? "System Administrator"
+                        : ((user as any).specialty ?? "User")}
                     </div>
                   </div>
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="rounded-xl p-1.5 text-slate-400 hover:bg-white/10 hover:text-red-400 transition"
-                  title="تسجيل الخروج"
+                  title="Sign out"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-950/30 px-3 py-2 text-[11px] font-bold text-slate-300 ring-1 ring-white/10">
+                <span>Version</span>
+                <span className="truncate text-cyan-200">{dynamicVersion}</span>
               </div>
             </div>
           </div>
@@ -229,30 +311,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="relative z-10 min-h-screen lg:pl-[290px]">
-        <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/78 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 px-4 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
-            <button className="rounded-2xl border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open sidebar">
+            <button
+              className="rounded-2xl border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm lg:hidden"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open sidebar"
+            >
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h1 className="truncate text-lg font-extrabold tracking-tight text-slate-950 sm:text-xl">{dynamicAppName}</h1>
-                <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">{dynamicVersion}</span>
+                <h1 className="truncate text-lg font-extrabold tracking-tight text-slate-950 dark:text-slate-100 sm:text-xl">
+                  {dynamicAppName}
+                </h1>
+                <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-100">
+                  {dynamicVersion}
+                </span>
               </div>
-              <p className="mt-0.5 truncate text-xs font-medium text-slate-500 sm:text-sm">{dynamicCompanyName} · {appMeta.subtitle}</p>
+              <p className="mt-0.5 truncate text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
+                {dynamicCompanyName} · {dynamicSubtitle}
+              </p>
             </div>
-            <div className="hidden min-w-[280px] items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500 shadow-inner md:flex">
-              <Search className="h-4 w-4" />
-              <span className="text-sm">Search blind tag, project, area...</span>
-            </div>
-            <ThemeToggle className="rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:text-cyan-700" />
+            <GlobalSearch className="hidden w-[min(420px,32vw)] md:block" />
+            <ThemeToggle className="shrink-0 rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
             <NotificationBell />
           </div>
         </header>
 
-        <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-          {children}
-        </main>
+        <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</main>
       </div>
     </div>
   );

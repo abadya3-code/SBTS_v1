@@ -112,11 +112,22 @@ This global stylesheet establishes a precise petrol-blue operations interface wi
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
-  html { scroll-behavior: smooth; }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "IBM Plex Sans", "Noto Sans Arabic", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family:
+      "IBM Plex Sans",
+      "Noto Sans Arabic",
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -126,7 +137,9 @@ This global stylesheet establishes a precise petrol-blue operations interface wi
   a[href],
   select:not(:disabled),
   input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) { @apply cursor-pointer; }
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
 }
 
 @layer components {
@@ -137,20 +150,65 @@ This global stylesheet establishes a precise petrol-blue operations interface wi
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  .flex { min-height: 0; min-width: 0; }
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
   .sbts-card {
     @apply rounded-2xl border border-slate-200/80 bg-white/90 shadow-[0_18px_45px_rgba(15,39,56,0.08)] backdrop-blur;
   }
   .sbts-dark-card {
     @apply rounded-2xl border border-white/10 bg-slate-950/55 shadow-[0_24px_80px_rgba(2,8,23,0.32)] backdrop-blur;
   }
-  .status-dot { @apply h-2.5 w-2.5 rounded-full ring-4 ring-white/80; }
+  .status-dot {
+    @apply h-2.5 w-2.5 rounded-full ring-4 ring-white/80;
+  }
   .industrial-grid {
     background-image:
       linear-gradient(rgba(23, 76, 126, 0.07) 1px, transparent 1px),
       linear-gradient(90deg, rgba(23, 76, 126, 0.07) 1px, transparent 1px);
     background-size: 28px 28px;
   }
-  @media (min-width: 640px) { .container { padding-left: 1.5rem; padding-right: 1.5rem; } }
-  @media (min-width: 1024px) { .container { padding-left: 2rem; padding-right: 2rem; max-width: 1440px; } }
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1440px;
+    }
+  }
+}
+
+@layer base {
+  html.font-compact {
+    font-size: 14px;
+  }
+  html.font-comfortable {
+    font-size: 16px;
+  }
+  html.font-large {
+    font-size: 18px;
+  }
+}
+
+@layer components {
+  .dark .sbts-card {
+    @apply border-slate-800/90 bg-slate-900/88 text-slate-100 shadow-[0_18px_45px_rgba(0,0,0,0.28)];
+  }
+  .dark .industrial-grid {
+    background-image:
+      linear-gradient(rgba(125, 211, 252, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(125, 211, 252, 0.055) 1px, transparent 1px);
+  }
+  .dark .status-dot {
+    @apply ring-slate-900/80;
+  }
+  .sbts-input {
+    @apply rounded-xl border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100;
+  }
 }

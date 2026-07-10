@@ -146,3 +146,21 @@ pnpm build
 ```
 
 تم تشغيل فحص TypeScript المتاح محلياً، لكنه توقف بسبب عدم وجود `node_modules` و type definitions، وليس بسبب Syntax في الملفات المعدلة.
+
+---
+
+# v1.6 UI/UX + Settings Integration
+
+## Completed
+- Rebuilt Dashboard as an English executive command center.
+- Connected Dashboard hero, app identity, company identity, version, and CTA buttons to General Settings.
+- Added a real global search component for projects and blinds.
+- Fixed notification bell dropdown so it stays inside viewport boundaries.
+- Added Appearance settings: theme selection, dark mode toggle, and font size scale.
+- Connected AppShell logo, app name, company name, subtitle, and version to settings.
+- Improved certificate and tag printing/export to use certificate/tag/general settings.
+- Redesigned Bulk Add Blinds from Excel into a guided 3-step import dialog.
+- Converted remaining Arabic user-facing pages to English: Login, Register, Approve, Notifications, User Management.
+
+## Notes
+Railway deployment remains the final build validation environment because pnpm could not be downloaded in the ChatGPT execution environment.

@@ -1,18 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-/**
- * ثيمات التطبيق الثلاث:
- * - sap-clean: احترافي وكلاسيكي (مستوحى من SAP)
- * - sbts-custom: مخصص وحديث (مستوحى من Aramco)
- * - modern: معاصر ومتطور (Dark Mode)
- */
 export type ThemeName = "sap-clean" | "sbts-custom" | "modern";
+export type FontScale = "compact" | "comfortable" | "large";
 
 interface ThemeContextType {
   currentTheme: ThemeName;
   setTheme: (theme: ThemeName) => void;
   isDarkMode: boolean;
   setIsDarkMode: (isDark: boolean) => void;
+  fontScale: FontScale;
+  setFontScale: (scale: FontScale) => void;
   availableThemes: ThemeName[];
 }
 
@@ -23,90 +20,74 @@ interface ThemeProviderProps {
   defaultTheme?: ThemeName;
 }
 
-/**
- * ThemeProvider - توفير سياق الثيمات لكل التطبيق
- * يدير:
- * - الثيم الحالي (SAP Clean, SBTS Custom, Modern)
- * - وضع Dark Mode
- * - حفظ الاختيار في localStorage
- * - تطبيق الثيم على DOM
- */
+const validThemes: ThemeName[] = ["sap-clean", "sbts-custom", "modern"];
+const validFontScales: FontScale[] = ["compact", "comfortable", "large"];
+
 export function ThemeProvider({
   children,
   defaultTheme = "sbts-custom",
 }: ThemeProviderProps) {
-  const [currentTheme, setCurrentThemeState] = useState<ThemeName>(defaultTheme);
+  const [currentTheme, setCurrentThemeState] =
+    useState<ThemeName>(defaultTheme);
   const [isDarkMode, setIsDarkModeState] = useState(false);
+  const [fontScale, setFontScaleState] = useState<FontScale>("comfortable");
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // تحميل الثيم المحفوظ من localStorage عند التحميل الأول
   useEffect(() => {
     const savedTheme = localStorage.getItem("sbts-theme") as ThemeName | null;
     const savedDarkMode = localStorage.getItem("sbts-dark-mode") === "true";
+    const savedFontScale = localStorage.getItem(
+      "sbts-font-scale"
+    ) as FontScale | null;
 
-    if (savedTheme && ["sap-clean", "sbts-custom", "modern"].includes(savedTheme)) {
+    if (savedTheme && validThemes.includes(savedTheme))
       setCurrentThemeState(savedTheme);
-    }
-
+    if (savedFontScale && validFontScales.includes(savedFontScale))
+      setFontScaleState(savedFontScale);
     setIsDarkModeState(savedDarkMode);
     setIsLoaded(true);
   }, []);
 
-  // تطبيق الثيم على DOM
   useEffect(() => {
     if (!isLoaded) return;
-
     const root = document.documentElement;
-
-    // إزالة جميع فئات الثيمات السابقة
-    root.classList.remove("theme-sap-clean", "theme-sbts-custom", "theme-modern");
-    root.classList.remove("dark");
-
-    // إضافة فئة الثيم الجديد
+    root.classList.remove(
+      "theme-sap-clean",
+      "theme-sbts-custom",
+      "theme-modern",
+      "dark",
+      "font-compact",
+      "font-comfortable",
+      "font-large"
+    );
     root.classList.add(`theme-${currentTheme}`);
+    root.classList.add(`font-${fontScale}`);
+    if (isDarkMode) root.classList.add("dark");
 
-    // إضافة فئة Dark Mode إذا كانت مفعلة
-    if (isDarkMode) {
-      root.classList.add("dark");
-    }
-
-    // حفظ الاختيار في localStorage
     localStorage.setItem("sbts-theme", currentTheme);
-    localStorage.setItem("sbts-dark-mode", isDarkMode.toString());
-  }, [currentTheme, isDarkMode, isLoaded]);
-
-  const setTheme = (theme: ThemeName) => {
-    setCurrentThemeState(theme);
-  };
-
-  const setIsDarkMode = (isDark: boolean) => {
-    setIsDarkModeState(isDark);
-  };
-
-  const value: ThemeContextType = {
-    currentTheme,
-    setTheme,
-    isDarkMode,
-    setIsDarkMode,
-    availableThemes: ["sap-clean", "sbts-custom", "modern"],
-  };
+    localStorage.setItem("sbts-dark-mode", String(isDarkMode));
+    localStorage.setItem("sbts-font-scale", fontScale);
+  }, [currentTheme, isDarkMode, fontScale, isLoaded]);
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider
+      value={{
+        currentTheme,
+        setTheme: setCurrentThemeState,
+        isDarkMode,
+        setIsDarkMode: setIsDarkModeState,
+        fontScale,
+        setFontScale: setFontScaleState,
+        availableThemes: validThemes,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
 }
 
-/**
- * useTheme Hook - للوصول إلى سياق الثيمات
- * استخدام:
- * const { currentTheme, setTheme, isDarkMode } = useTheme();
- */
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
+  if (!context) throw new Error("useTheme must be used within ThemeProvider");
   return context;
 }

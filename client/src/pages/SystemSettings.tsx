@@ -3,52 +3,160 @@ Design Philosophy: Industrial Command Center Minimalism.
 System Settings Center — Full operational configuration in one authoritative panel.
 5 Tabs: General, Default Tag, Certificate, Security, Notifications.
 */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Bell, Building2, FileText, Lock, Save, Settings, Shield, Tag, Upload, X, Image, Palette, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  FileText,
+  Lock,
+  Save,
+  Settings,
+  Shield,
+  Tag,
+  Upload,
+  X,
+  Image,
+  Palette,
+  Eye,
+  EyeOff,
+  Plus,
+  Trash2,
+  Moon,
+  Sun,
+  Type,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/common/PageHeader";
+import {
+  useTheme,
+  type FontScale,
+  type ThemeName,
+} from "@/contexts/ThemeContext";
 
-type Tab = "general" | "defaultTag" | "certificate" | "security" | "notifications";
+type Tab =
+  | "general"
+  | "appearance"
+  | "defaultTag"
+  | "certificate"
+  | "security"
+  | "notifications";
 
-const tabs: { key: Tab; label: string; icon: typeof Settings; description: string }[] = [
-  { key: "general", label: "General Settings", icon: Settings, description: "App identity, company info, dashboard & versioning" },
-  { key: "defaultTag", label: "Default Tag Settings", icon: Tag, description: "Tag format, visuals & live preview" },
-  { key: "certificate", label: "Certificate Settings", icon: FileText, description: "Print layout, sections & branding" },
-  { key: "security", label: "Security Settings", icon: Shield, description: "QR access, delete policies & sessions" },
-  { key: "notifications", label: "Notification Settings", icon: Bell, description: "Event notification preferences" },
+const tabs: {
+  key: Tab;
+  label: string;
+  icon: typeof Settings;
+  description: string;
+}[] = [
+  {
+    key: "general",
+    label: "General Settings",
+    icon: Settings,
+    description: "App identity, company info, dashboard & versioning",
+  },
+  {
+    key: "appearance",
+    label: "Appearance",
+    icon: Palette,
+    description: "Theme, dark mode, and font scale",
+  },
+  {
+    key: "defaultTag",
+    label: "Default Tag Settings",
+    icon: Tag,
+    description: "Tag format, visuals & live preview",
+  },
+  {
+    key: "certificate",
+    label: "Certificate Settings",
+    icon: FileText,
+    description: "Print layout, sections & branding",
+  },
+  {
+    key: "security",
+    label: "Security Settings",
+    icon: Shield,
+    description: "QR access, delete policies & sessions",
+  },
+  {
+    key: "notifications",
+    label: "Notification Settings",
+    icon: Bell,
+    description: "Event notification preferences",
+  },
 ];
 
 // ─── General Settings Tab ─────────────────────────────────────────────────────
 
 function GeneralSettingsTab() {
+  const utils = trpc.useUtils();
   const { data, isLoading, refetch } = trpc.settings.general.get.useQuery();
   const updateMutation = trpc.settings.general.update.useMutation({
-    onSuccess: () => { toast.success("General settings saved successfully."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: async () => {
+      toast.success("General settings saved successfully.");
+      await utils.settings.general.get.invalidate();
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
   const uploadImageMutation = trpc.settings.general.uploadImage.useMutation({
-    onSuccess: ({ url }) => { toast.success("Image uploaded."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: async ({ url }, variables) => {
+      const fieldMap = {
+        appImage: "appImageUrl",
+        companyLogo: "companyLogoUrl",
+        heroImage: "dashboardHeroImageUrl",
+      } as const;
+      const field = fieldMap[variables.target];
+      setForm(f => (f ? { ...f, [field]: url } : f));
+      toast.success("Image uploaded and linked to settings.");
+      await utils.settings.general.get.invalidate();
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
 
   const [form, setForm] = useState<{
-    companyName: string; companyCode: string; plantName: string; contractNumber: string;
-    language: "en" | "ar"; timezone: string; dateFormat: string;
-    appName: string; appDescription: string; appImageUrl: string; companyLogoUrl: string;
-    companyDescription: string; regionName: string;
-    dashboardHeroTitle: string; dashboardHeroDescription: string; dashboardHeroBadge: string;
-    dashboardHeroImageUrl: string; dashboardCtaButtons: string;
-    versionName: string; versionDate: string;
+    companyName: string;
+    companyCode: string;
+    plantName: string;
+    contractNumber: string;
+    language: "en" | "ar";
+    timezone: string;
+    dateFormat: string;
+    appName: string;
+    appDescription: string;
+    appImageUrl: string;
+    companyLogoUrl: string;
+    companyDescription: string;
+    regionName: string;
+    dashboardHeroTitle: string;
+    dashboardHeroDescription: string;
+    dashboardHeroBadge: string;
+    dashboardHeroImageUrl: string;
+    dashboardCtaButtons: string;
+    versionName: string;
+    versionDate: string;
     maintenanceMode: boolean;
   } | null>(null);
 
@@ -79,21 +187,37 @@ function GeneralSettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl bg-slate-100"
+          />
+        ))}
+      </div>
+    );
   }
 
   const handleUpload = (target: "appImage" | "companyLogo" | "heroImage") => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/png,image/jpeg,image/jpg,image/svg+xml,image/webp";
-    input.onchange = (e) => {
+    input.onchange = e => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { toast.error("File must be under 2MB"); return; }
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("File must be under 2MB");
+        return;
+      }
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = ev => {
         const base64 = (ev.target?.result as string).split(",")[1];
-        uploadImageMutation.mutate({ base64, mimeType: file.type as "image/png", target });
+        uploadImageMutation.mutate({
+          base64,
+          mimeType: file.type as "image/png",
+          target,
+        });
       };
       reader.readAsDataURL(file);
     };
@@ -106,7 +230,7 @@ function GeneralSettingsTab() {
       companyCode: form.companyCode,
       plantName: form.plantName,
       contractNumber: form.contractNumber || null,
-      language: form.language,
+      language: "en",
       timezone: form.timezone,
       dateFormat: form.dateFormat,
       appName: form.appName,
@@ -136,45 +260,129 @@ function GeneralSettingsTab() {
               <Image className="h-5 w-5 text-cyan-700" />
             </div>
             <div>
-              <CardTitle className="text-base font-extrabold text-slate-950">Application Identity</CardTitle>
-              <CardDescription className="text-xs text-slate-500">App name, description, and default image</CardDescription>
+              <CardTitle className="text-base font-extrabold text-slate-950">
+                Application Identity
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                App name, description, and default image
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Application Name</Label>
-              <Input value={form.appName} onChange={e => setForm(f => f && ({ ...f, appName: e.target.value }))} placeholder="SBTS Professional" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Application Name
+              </Label>
+              <Input
+                value={form.appName}
+                onChange={e =>
+                  setForm(f => f && { ...f, appName: e.target.value })
+                }
+                placeholder="SBTS Professional"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Region / Location</Label>
-              <Input value={form.regionName} onChange={e => setForm(f => f && ({ ...f, regionName: e.target.value }))} placeholder="e.g. Eastern Province" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Region / Location
+              </Label>
+              <Input
+                value={form.regionName}
+                onChange={e =>
+                  setForm(f => f && { ...f, regionName: e.target.value })
+                }
+                placeholder="e.g. Eastern Province"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Application Description</Label>
-              <Textarea value={form.appDescription} onChange={e => setForm(f => f && ({ ...f, appDescription: e.target.value }))} placeholder="Brief description of the application..." rows={2} className="sbts-input resize-none" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Application Description
+              </Label>
+              <Textarea
+                value={form.appDescription}
+                onChange={e =>
+                  setForm(f => f && { ...f, appDescription: e.target.value })
+                }
+                placeholder="Brief description of the application..."
+                rows={2}
+                className="sbts-input resize-none"
+              />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">App Image</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                App Image
+              </Label>
               <div className="flex items-center gap-3">
-                {form.appImageUrl && <img src={form.appImageUrl} alt="App" className="h-14 w-14 rounded-xl border object-cover" />}
-                <Button type="button" variant="outline" size="sm" onClick={() => handleUpload("appImage")} disabled={uploadImageMutation.isPending}>
-                  <Upload className="mr-1 h-3.5 w-3.5" /> {form.appImageUrl ? "Replace" : "Upload"}
+                {form.appImageUrl && (
+                  <img
+                    src={form.appImageUrl}
+                    alt="App"
+                    className="h-14 w-14 rounded-xl border object-cover"
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUpload("appImage")}
+                  disabled={uploadImageMutation.isPending}
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />{" "}
+                  {form.appImageUrl ? "Replace" : "Upload"}
                 </Button>
-                {form.appImageUrl && <Button type="button" variant="ghost" size="sm" onClick={() => setForm(f => f && ({ ...f, appImageUrl: "" }))} className="text-red-500"><X className="h-3.5 w-3.5" /></Button>}
+                {form.appImageUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setForm(f => f && { ...f, appImageUrl: "" })}
+                    className="text-red-500"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Logo</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Logo
+              </Label>
               <div className="flex items-center gap-3">
-                {form.companyLogoUrl && <img src={form.companyLogoUrl} alt="Logo" className="h-14 w-14 rounded-xl border object-contain" />}
-                <Button type="button" variant="outline" size="sm" onClick={() => handleUpload("companyLogo")} disabled={uploadImageMutation.isPending}>
-                  <Upload className="mr-1 h-3.5 w-3.5" /> {form.companyLogoUrl ? "Replace" : "Upload"}
+                {form.companyLogoUrl && (
+                  <img
+                    src={form.companyLogoUrl}
+                    alt="Logo"
+                    className="h-14 w-14 rounded-xl border object-contain"
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUpload("companyLogo")}
+                  disabled={uploadImageMutation.isPending}
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />{" "}
+                  {form.companyLogoUrl ? "Replace" : "Upload"}
                 </Button>
-                {form.companyLogoUrl && <Button type="button" variant="ghost" size="sm" onClick={() => setForm(f => f && ({ ...f, companyLogoUrl: "" }))} className="text-red-500"><X className="h-3.5 w-3.5" /></Button>}
+                {form.companyLogoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setForm(f => f && { ...f, companyLogoUrl: "" })
+                    }
+                    className="text-red-500"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -189,32 +397,84 @@ function GeneralSettingsTab() {
               <Building2 className="h-5 w-5 text-cyan-700" />
             </div>
             <div>
-              <CardTitle className="text-base font-extrabold text-slate-950">Company Information</CardTitle>
-              <CardDescription className="text-xs text-slate-500">Core organizational identifiers used across reports and certificates</CardDescription>
+              <CardTitle className="text-base font-extrabold text-slate-950">
+                Company Information
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Core organizational identifiers used across reports and
+                certificates
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Name</Label>
-              <Input value={form.companyName} onChange={e => setForm(f => f && ({ ...f, companyName: e.target.value }))} placeholder="e.g. Shedgum Gas Plant" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Name
+              </Label>
+              <Input
+                value={form.companyName}
+                onChange={e =>
+                  setForm(f => f && { ...f, companyName: e.target.value })
+                }
+                placeholder="e.g. Shedgum Gas Plant"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Code</Label>
-              <Input value={form.companyCode} onChange={e => setForm(f => f && ({ ...f, companyCode: e.target.value }))} placeholder="e.g. SGP" maxLength={10} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Code
+              </Label>
+              <Input
+                value={form.companyCode}
+                onChange={e =>
+                  setForm(f => f && { ...f, companyCode: e.target.value })
+                }
+                placeholder="e.g. SGP"
+                maxLength={10}
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Plant Name</Label>
-              <Input value={form.plantName} onChange={e => setForm(f => f && ({ ...f, plantName: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Plant Name
+              </Label>
+              <Input
+                value={form.plantName}
+                onChange={e =>
+                  setForm(f => f && { ...f, plantName: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Contract Number</Label>
-              <Input value={form.contractNumber} onChange={e => setForm(f => f && ({ ...f, contractNumber: e.target.value }))} placeholder="SAP-2024-001" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Contract Number
+              </Label>
+              <Input
+                value={form.contractNumber}
+                onChange={e =>
+                  setForm(f => f && { ...f, contractNumber: e.target.value })
+                }
+                placeholder="SAP-2024-001"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Description</Label>
-              <Textarea value={form.companyDescription} onChange={e => setForm(f => f && ({ ...f, companyDescription: e.target.value }))} rows={2} className="sbts-input resize-none" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Description
+              </Label>
+              <Textarea
+                value={form.companyDescription}
+                onChange={e =>
+                  setForm(
+                    f => f && { ...f, companyDescription: e.target.value }
+                  )
+                }
+                rows={2}
+                className="sbts-input resize-none"
+              />
             </div>
           </div>
         </CardContent>
@@ -223,27 +483,48 @@ function GeneralSettingsTab() {
       {/* Localization */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Localization</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Language, timezone, and date format</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Localization
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Language, timezone, and date format
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Language</Label>
-              <Select value={form.language} onValueChange={v => setForm(f => f && ({ ...f, language: v as "en" | "ar" }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Language
+              </Label>
+              <Select
+                value={form.language}
+                onValueChange={v =>
+                  setForm(f => f && { ...f, language: v as "en" | "ar" })
+                }
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="ar">العربية</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Timezone</Label>
-              <Select value={form.timezone} onValueChange={v => setForm(f => f && ({ ...f, timezone: v }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Timezone
+              </Label>
+              <Select
+                value={form.timezone}
+                onValueChange={v => setForm(f => f && { ...f, timezone: v })}
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Asia/Riyadh">Asia/Riyadh (UTC+3)</SelectItem>
+                  <SelectItem value="Asia/Riyadh">
+                    Asia/Riyadh (UTC+3)
+                  </SelectItem>
                   <SelectItem value="Asia/Dubai">Asia/Dubai (UTC+4)</SelectItem>
                   <SelectItem value="UTC">UTC</SelectItem>
                   <SelectItem value="Europe/London">Europe/London</SelectItem>
@@ -251,9 +532,16 @@ function GeneralSettingsTab() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Date Format</Label>
-              <Select value={form.dateFormat} onValueChange={v => setForm(f => f && ({ ...f, dateFormat: v }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Date Format
+              </Label>
+              <Select
+                value={form.dateFormat}
+                onValueChange={v => setForm(f => f && { ...f, dateFormat: v })}
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
                   <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
@@ -268,29 +556,81 @@ function GeneralSettingsTab() {
       {/* Dashboard Hero */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Dashboard Hero Section</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Title, description, badge, and CTA buttons shown on the main dashboard</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Dashboard Hero Section
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Title, description, badge, and CTA buttons shown on the main
+            dashboard
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Hero Title</Label>
-              <Input value={form.dashboardHeroTitle} onChange={e => setForm(f => f && ({ ...f, dashboardHeroTitle: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Hero Title
+              </Label>
+              <Input
+                value={form.dashboardHeroTitle}
+                onChange={e =>
+                  setForm(
+                    f => f && { ...f, dashboardHeroTitle: e.target.value }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Hero Description</Label>
-              <Textarea value={form.dashboardHeroDescription} onChange={e => setForm(f => f && ({ ...f, dashboardHeroDescription: e.target.value }))} rows={2} className="sbts-input resize-none" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Hero Description
+              </Label>
+              <Textarea
+                value={form.dashboardHeroDescription}
+                onChange={e =>
+                  setForm(
+                    f => f && { ...f, dashboardHeroDescription: e.target.value }
+                  )
+                }
+                rows={2}
+                className="sbts-input resize-none"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Badge Text</Label>
-              <Input value={form.dashboardHeroBadge} onChange={e => setForm(f => f && ({ ...f, dashboardHeroBadge: e.target.value }))} placeholder="e.g. Production Ready" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Badge Text
+              </Label>
+              <Input
+                value={form.dashboardHeroBadge}
+                onChange={e =>
+                  setForm(
+                    f => f && { ...f, dashboardHeroBadge: e.target.value }
+                  )
+                }
+                placeholder="e.g. Production Ready"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Hero Background Image</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Hero Background Image
+              </Label>
               <div className="flex items-center gap-3">
-                {form.dashboardHeroImageUrl && <img src={form.dashboardHeroImageUrl} alt="Hero" className="h-10 w-20 rounded-lg border object-cover" />}
-                <Button type="button" variant="outline" size="sm" onClick={() => handleUpload("heroImage")} disabled={uploadImageMutation.isPending}>
-                  <Upload className="mr-1 h-3.5 w-3.5" /> {form.dashboardHeroImageUrl ? "Replace" : "Upload"}
+                {form.dashboardHeroImageUrl && (
+                  <img
+                    src={form.dashboardHeroImageUrl}
+                    alt="Hero"
+                    className="h-10 w-20 rounded-lg border object-cover"
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUpload("heroImage")}
+                  disabled={uploadImageMutation.isPending}
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />{" "}
+                  {form.dashboardHeroImageUrl ? "Replace" : "Upload"}
                 </Button>
               </div>
             </div>
@@ -301,39 +641,220 @@ function GeneralSettingsTab() {
       {/* Version & System */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Version & System</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Version info and maintenance mode</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Version & System
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Version info and maintenance mode
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Version Name</Label>
-              <Input value={form.versionName} onChange={e => setForm(f => f && ({ ...f, versionName: e.target.value }))} placeholder="Professional Edition v1.0" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Version Name
+              </Label>
+              <Input
+                value={form.versionName}
+                onChange={e =>
+                  setForm(f => f && { ...f, versionName: e.target.value })
+                }
+                placeholder="Professional Edition v1.0"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Version Date</Label>
-              <Input value={form.versionDate} onChange={e => setForm(f => f && ({ ...f, versionDate: e.target.value }))} placeholder="2025-01-01" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Version Date
+              </Label>
+              <Input
+                value={form.versionDate}
+                onChange={e =>
+                  setForm(f => f && { ...f, versionDate: e.target.value })
+                }
+                placeholder="2025-01-01"
+                className="sbts-input"
+              />
             </div>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
             <div>
               <div className="flex items-center gap-2">
-                <div className="text-sm font-bold text-amber-900">Maintenance Mode</div>
-                {form.maintenanceMode && <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-800 text-[10px]">ACTIVE</Badge>}
+                <div className="text-sm font-bold text-amber-900">
+                  Maintenance Mode
+                </div>
+                {form.maintenanceMode && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 bg-amber-100 text-amber-800 text-[10px]"
+                  >
+                    ACTIVE
+                  </Badge>
+                )}
               </div>
-              <div className="text-xs text-amber-700">Restrict system access to administrators only</div>
+              <div className="text-xs text-amber-700">
+                Restrict system access to administrators only
+              </div>
             </div>
-            <Switch checked={form.maintenanceMode} onCheckedChange={v => setForm(f => f && ({ ...f, maintenanceMode: v }))} />
+            <Switch
+              checked={form.maintenanceMode}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, maintenanceMode: v })
+              }
+            />
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800"
+        >
           <Save className="h-4 w-4" />
           {updateMutation.isPending ? "Saving..." : "Save General Settings"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ─── Appearance Settings Tab ─────────────────────────────────────────────────
+
+function AppearanceSettingsTab() {
+  const {
+    currentTheme,
+    setTheme,
+    isDarkMode,
+    setIsDarkMode,
+    fontScale,
+    setFontScale,
+  } = useTheme();
+  const themes: Array<{
+    key: ThemeName;
+    title: string;
+    desc: string;
+    swatch: string;
+  }> = [
+    {
+      key: "sbts-custom",
+      title: "SBTS Industrial",
+      desc: "Balanced oil & gas operations theme for daily use.",
+      swatch: "from-cyan-700 to-slate-900",
+    },
+    {
+      key: "sap-clean",
+      title: "SAP Clean",
+      desc: "Light enterprise UI for admin and planning work.",
+      swatch: "from-blue-800 to-sky-500",
+    },
+    {
+      key: "modern",
+      title: "Modern Executive",
+      desc: "High-contrast executive style for screens and command centers.",
+      swatch: "from-violet-700 to-cyan-500",
+    },
+  ];
+  const fontScales: Array<{ key: FontScale; title: string; desc: string }> = [
+    {
+      key: "compact",
+      title: "Compact",
+      desc: "More rows visible on laptops and control-room screens.",
+    },
+    {
+      key: "comfortable",
+      title: "Comfortable",
+      desc: "Recommended default for most users.",
+    },
+    {
+      key: "large",
+      title: "Large",
+      desc: "Better readability on tablets and shared screens.",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Card className="sbts-card">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-extrabold text-slate-950 dark:text-slate-100">
+            Theme Library
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Select a clean and consistent application theme.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          {themes.map(theme => (
+            <button
+              key={theme.key}
+              type="button"
+              onClick={() => setTheme(theme.key)}
+              className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg ${currentTheme === theme.key ? "border-cyan-300 bg-cyan-50 ring-2 ring-cyan-100 dark:bg-cyan-950/30" : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"}`}
+            >
+              <div
+                className={`h-16 rounded-xl bg-gradient-to-br ${theme.swatch}`}
+              />
+              <div className="mt-4 text-sm font-extrabold text-slate-950 dark:text-slate-100">
+                {theme.title}
+              </div>
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {theme.desc}
+              </div>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card className="sbts-card">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-extrabold text-slate-950 dark:text-slate-100">
+            Display Mode
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Dark mode and font size are saved locally for each user device.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-center gap-3">
+              {isDarkMode ? (
+                <Moon className="h-5 w-5 text-cyan-600" />
+              ) : (
+                <Sun className="h-5 w-5 text-amber-500" />
+              )}
+              <div>
+                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Dark Mode
+                </div>
+                <div className="text-xs text-slate-500">
+                  Switch the full shell, cards, search, and notifications to
+                  dark colors.
+                </div>
+              </div>
+            </div>
+            <Switch checked={isDarkMode} onCheckedChange={setIsDarkMode} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {fontScales.map(scale => (
+              <button
+                key={scale.key}
+                type="button"
+                onClick={() => setFontScale(scale.key)}
+                className={`rounded-xl border px-4 py-3 text-left transition ${fontScale === scale.key ? "border-cyan-300 bg-cyan-50 text-cyan-950 dark:bg-cyan-950/30 dark:text-cyan-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"}`}
+              >
+                <div className="flex items-center gap-2 text-sm font-extrabold">
+                  <Type className="h-4 w-4" /> {scale.title}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-500">
+                  {scale.desc}
+                </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -343,18 +864,42 @@ function GeneralSettingsTab() {
 function DefaultTagSettingsTab() {
   const { data, isLoading, refetch } = trpc.settings.defaultTag.get.useQuery();
   const updateMutation = trpc.settings.defaultTag.update.useMutation({
-    onSuccess: () => { toast.success("Tag settings saved."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      toast.success("Tag settings saved.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
 
   const [form, setForm] = useState<{
-    tagPrefix: string; tagSeparator: string; tagPaddingDigits: number; tagStartNumber: number;
-    defaultType: string; defaultSize: string; defaultRate: string;
+    tagPrefix: string;
+    tagSeparator: string;
+    tagPaddingDigits: number;
+    tagStartNumber: number;
+    defaultType: string;
+    defaultSize: string;
+    defaultRate: string;
     defaultPriority: "Low" | "Normal" | "High" | "Critical";
-    defaultPhase: "Broken / Preparation" | "Assembly" | "Tight & Torque" | "Final Tight" | "Inspection Ready";
-    autoGenerateTag: boolean; requireEquipment: boolean; requireLocation: boolean; requireIsolationPoint: boolean;
-    tagColor: string; tagWidth: number; tagHeight: number; tagFontSize: number; tagFontColor: string;
-    tagTheme: string; tagShowLogo: boolean; tagShowQR: boolean; tagHoleEnabled: boolean; tagHolePosition: string;
+    defaultPhase:
+      | "Broken / Preparation"
+      | "Assembly"
+      | "Tight & Torque"
+      | "Final Tight"
+      | "Inspection Ready";
+    autoGenerateTag: boolean;
+    requireEquipment: boolean;
+    requireLocation: boolean;
+    requireIsolationPoint: boolean;
+    tagColor: string;
+    tagWidth: number;
+    tagHeight: number;
+    tagFontSize: number;
+    tagFontColor: string;
+    tagTheme: string;
+    tagShowLogo: boolean;
+    tagShowQR: boolean;
+    tagHoleEnabled: boolean;
+    tagHolePosition: string;
   } | null>(null);
 
   if (data && !form) {
@@ -366,8 +911,16 @@ function DefaultTagSettingsTab() {
       defaultType: data.defaultType,
       defaultSize: data.defaultSize,
       defaultRate: data.defaultRate ?? "",
-      defaultPriority: (data.defaultPriority as "Low" | "Normal" | "High" | "Critical") ?? "Normal",
-      defaultPhase: (data.defaultPhase as "Broken / Preparation" | "Assembly" | "Tight & Torque" | "Final Tight" | "Inspection Ready") ?? "Broken / Preparation",
+      defaultPriority:
+        (data.defaultPriority as "Low" | "Normal" | "High" | "Critical") ??
+        "Normal",
+      defaultPhase:
+        (data.defaultPhase as
+          | "Broken / Preparation"
+          | "Assembly"
+          | "Tight & Torque"
+          | "Final Tight"
+          | "Inspection Ready") ?? "Broken / Preparation",
       autoGenerateTag: data.autoGenerateTag === 1,
       requireEquipment: data.requireEquipment === 1,
       requireLocation: data.requireLocation === 1,
@@ -386,7 +939,16 @@ function DefaultTagSettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl bg-slate-100"
+          />
+        ))}
+      </div>
+    );
   }
 
   const previewTag = `${form.tagPrefix}${form.tagSeparator}${String(form.tagStartNumber).padStart(form.tagPaddingDigits, "0")}`;
@@ -424,8 +986,12 @@ function DefaultTagSettingsTab() {
       {/* Live Tag Preview */}
       <Card className="sbts-card border-cyan-200 bg-gradient-to-br from-cyan-50/50 to-white">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-extrabold text-slate-950">Live Tag Preview</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Changes reflect in real-time</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Live Tag Preview
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Changes reflect in real-time
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-4">
@@ -443,19 +1009,32 @@ function DefaultTagSettingsTab() {
               {form.tagHoleEnabled && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 h-4 w-4 rounded-full border-2 border-slate-400 bg-white" />
               )}
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] mt-3" style={{ color: form.tagColor }}>
+              <div
+                className="text-[10px] font-extrabold uppercase tracking-[0.2em] mt-3"
+                style={{ color: form.tagColor }}
+              >
                 SBTS BLIND TAG
               </div>
-              <div className="font-mono text-2xl font-extrabold tracking-wide" style={{ color: form.tagFontColor, fontSize: `${form.tagFontSize}px` }}>
+              <div
+                className="font-mono text-2xl font-extrabold tracking-wide"
+                style={{
+                  color: form.tagFontColor,
+                  fontSize: `${form.tagFontSize}px`,
+                }}
+              >
                 {previewTag}
               </div>
               {form.tagShowQR && (
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
-                  <span className="text-[9px] font-bold text-slate-400">QR</span>
+                  <span className="text-[9px] font-bold text-slate-400">
+                    QR
+                  </span>
                 </div>
               )}
               {form.tagShowLogo && (
-                <div className="text-[8px] font-bold text-slate-400 mt-1">LOGO</div>
+                <div className="text-[8px] font-bold text-slate-400 mt-1">
+                  LOGO
+                </div>
               )}
             </div>
           </div>
@@ -467,40 +1046,108 @@ function DefaultTagSettingsTab() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-extrabold text-slate-950">Tag Format</CardTitle>
-              <CardDescription className="text-xs text-slate-500">Configure how blind tags are auto-generated</CardDescription>
+              <CardTitle className="text-base font-extrabold text-slate-950">
+                Tag Format
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Configure how blind tags are auto-generated
+              </CardDescription>
             </div>
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-center">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-600">Preview</div>
-              <div className="font-mono text-lg font-extrabold text-cyan-800">{previewTag}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-600">
+                Preview
+              </div>
+              <div className="font-mono text-lg font-extrabold text-cyan-800">
+                {previewTag}
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Prefix</Label>
-              <Input value={form.tagPrefix} onChange={e => setForm(f => f && ({ ...f, tagPrefix: e.target.value }))} maxLength={10} className="sbts-input font-mono" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Prefix
+              </Label>
+              <Input
+                value={form.tagPrefix}
+                onChange={e =>
+                  setForm(f => f && { ...f, tagPrefix: e.target.value })
+                }
+                maxLength={10}
+                className="sbts-input font-mono"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Separator</Label>
-              <Input value={form.tagSeparator} onChange={e => setForm(f => f && ({ ...f, tagSeparator: e.target.value }))} maxLength={3} className="sbts-input font-mono" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Separator
+              </Label>
+              <Input
+                value={form.tagSeparator}
+                onChange={e =>
+                  setForm(f => f && { ...f, tagSeparator: e.target.value })
+                }
+                maxLength={3}
+                className="sbts-input font-mono"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Padding Digits</Label>
-              <Input type="number" min={1} max={6} value={form.tagPaddingDigits} onChange={e => setForm(f => f && ({ ...f, tagPaddingDigits: parseInt(e.target.value) || 3 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Padding Digits
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                max={6}
+                value={form.tagPaddingDigits}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        tagPaddingDigits: parseInt(e.target.value) || 3,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Start Number</Label>
-              <Input type="number" min={1} value={form.tagStartNumber} onChange={e => setForm(f => f && ({ ...f, tagStartNumber: parseInt(e.target.value) || 1 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Start Number
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.tagStartNumber}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        tagStartNumber: parseInt(e.target.value) || 1,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <div className="text-sm font-bold text-slate-900">Auto-Generate Tag</div>
-              <div className="text-xs text-slate-500">Automatically generate tag number when adding new blinds</div>
+              <div className="text-sm font-bold text-slate-900">
+                Auto-Generate Tag
+              </div>
+              <div className="text-xs text-slate-500">
+                Automatically generate tag number when adding new blinds
+              </div>
             </div>
-            <Switch checked={form.autoGenerateTag} onCheckedChange={v => setForm(f => f && ({ ...f, autoGenerateTag: v }))} />
+            <Switch
+              checked={form.autoGenerateTag}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, autoGenerateTag: v })
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -511,43 +1158,125 @@ function DefaultTagSettingsTab() {
           <div className="flex items-center gap-3">
             <Palette className="h-5 w-5 text-cyan-700" />
             <div>
-              <CardTitle className="text-base font-extrabold text-slate-950">Tag Visual Settings</CardTitle>
-              <CardDescription className="text-xs text-slate-500">Colors, dimensions, and display options</CardDescription>
+              <CardTitle className="text-base font-extrabold text-slate-950">
+                Tag Visual Settings
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Colors, dimensions, and display options
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Border Color</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Border Color
+              </Label>
               <div className="flex items-center gap-2">
-                <input type="color" value={form.tagColor} onChange={e => setForm(f => f && ({ ...f, tagColor: e.target.value }))} className="h-9 w-12 cursor-pointer rounded-lg border" />
-                <Input value={form.tagColor} onChange={e => setForm(f => f && ({ ...f, tagColor: e.target.value }))} className="sbts-input font-mono text-xs" />
+                <input
+                  type="color"
+                  value={form.tagColor}
+                  onChange={e =>
+                    setForm(f => f && { ...f, tagColor: e.target.value })
+                  }
+                  className="h-9 w-12 cursor-pointer rounded-lg border"
+                />
+                <Input
+                  value={form.tagColor}
+                  onChange={e =>
+                    setForm(f => f && { ...f, tagColor: e.target.value })
+                  }
+                  className="sbts-input font-mono text-xs"
+                />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Font Color</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Font Color
+              </Label>
               <div className="flex items-center gap-2">
-                <input type="color" value={form.tagFontColor} onChange={e => setForm(f => f && ({ ...f, tagFontColor: e.target.value }))} className="h-9 w-12 cursor-pointer rounded-lg border" />
-                <Input value={form.tagFontColor} onChange={e => setForm(f => f && ({ ...f, tagFontColor: e.target.value }))} className="sbts-input font-mono text-xs" />
+                <input
+                  type="color"
+                  value={form.tagFontColor}
+                  onChange={e =>
+                    setForm(f => f && { ...f, tagFontColor: e.target.value })
+                  }
+                  className="h-9 w-12 cursor-pointer rounded-lg border"
+                />
+                <Input
+                  value={form.tagFontColor}
+                  onChange={e =>
+                    setForm(f => f && { ...f, tagFontColor: e.target.value })
+                  }
+                  className="sbts-input font-mono text-xs"
+                />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Font Size (px)</Label>
-              <Input type="number" min={8} max={32} value={form.tagFontSize} onChange={e => setForm(f => f && ({ ...f, tagFontSize: parseInt(e.target.value) || 14 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Font Size (px)
+              </Label>
+              <Input
+                type="number"
+                min={8}
+                max={32}
+                value={form.tagFontSize}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && { ...f, tagFontSize: parseInt(e.target.value) || 14 }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Width (mm)</Label>
-              <Input type="number" min={40} max={200} value={form.tagWidth} onChange={e => setForm(f => f && ({ ...f, tagWidth: parseInt(e.target.value) || 85 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Width (mm)
+              </Label>
+              <Input
+                type="number"
+                min={40}
+                max={200}
+                value={form.tagWidth}
+                onChange={e =>
+                  setForm(
+                    f => f && { ...f, tagWidth: parseInt(e.target.value) || 85 }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Height (mm)</Label>
-              <Input type="number" min={30} max={150} value={form.tagHeight} onChange={e => setForm(f => f && ({ ...f, tagHeight: parseInt(e.target.value) || 55 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Height (mm)
+              </Label>
+              <Input
+                type="number"
+                min={30}
+                max={150}
+                value={form.tagHeight}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && { ...f, tagHeight: parseInt(e.target.value) || 55 }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Theme</Label>
-              <Select value={form.tagTheme} onValueChange={v => setForm(f => f && ({ ...f, tagTheme: v }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Theme
+              </Label>
+              <Select
+                value={form.tagTheme}
+                onValueChange={v => setForm(f => f && { ...f, tagTheme: v })}
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="industrial">Industrial</SelectItem>
                   <SelectItem value="modern">Modern</SelectItem>
@@ -560,23 +1289,52 @@ function DefaultTagSettingsTab() {
           <Separator />
           <div className="space-y-3">
             {[
-              { key: "tagShowLogo" as const, label: "Show Logo on Tag", desc: "Display company logo on the physical tag" },
-              { key: "tagShowQR" as const, label: "Show QR Code", desc: "Include scannable QR code on the tag" },
-              { key: "tagHoleEnabled" as const, label: "Hanging Hole", desc: "Add a hole marker for physical tag attachment" },
+              {
+                key: "tagShowLogo" as const,
+                label: "Show Logo on Tag",
+                desc: "Display company logo on the physical tag",
+              },
+              {
+                key: "tagShowQR" as const,
+                label: "Show QR Code",
+                desc: "Include scannable QR code on the tag",
+              },
+              {
+                key: "tagHoleEnabled" as const,
+                label: "Hanging Hole",
+                desc: "Add a hole marker for physical tag attachment",
+              },
             ].map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <div
+                key={key}
+                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+              >
                 <div>
-                  <div className="text-sm font-bold text-slate-900">{label}</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {label}
+                  </div>
                   <div className="text-xs text-slate-500">{desc}</div>
                 </div>
-                <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+                <Switch
+                  checked={form[key]}
+                  onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+                />
               </div>
             ))}
             {form.tagHoleEnabled && (
               <div className="ml-4 space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Hole Position</Label>
-                <Select value={form.tagHolePosition} onValueChange={v => setForm(f => f && ({ ...f, tagHolePosition: v }))}>
-                  <SelectTrigger className="sbts-input w-48"><SelectValue /></SelectTrigger>
+                <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Hole Position
+                </Label>
+                <Select
+                  value={form.tagHolePosition}
+                  onValueChange={v =>
+                    setForm(f => f && { ...f, tagHolePosition: v })
+                  }
+                >
+                  <SelectTrigger className="sbts-input w-48">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="top-center">Top Center</SelectItem>
                     <SelectItem value="top-left">Top Left</SelectItem>
@@ -592,17 +1350,30 @@ function DefaultTagSettingsTab() {
       {/* Default Blind Values */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Default Blind Values</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Pre-filled values when registering new blinds</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Default Blind Values
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Pre-filled values when registering new blinds
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Default Type</Label>
-              <Select value={form.defaultType} onValueChange={v => setForm(f => f && ({ ...f, defaultType: v }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Default Type
+              </Label>
+              <Select
+                value={form.defaultType}
+                onValueChange={v => setForm(f => f && { ...f, defaultType: v })}
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Spectacle Blind">Spectacle Blind</SelectItem>
+                  <SelectItem value="Spectacle Blind">
+                    Spectacle Blind
+                  </SelectItem>
                   <SelectItem value="Slip Blind">Slip Blind</SelectItem>
                   <SelectItem value="Drop Spool">Drop Spool</SelectItem>
                   <SelectItem value="Isolation">Isolation</SelectItem>
@@ -610,17 +1381,50 @@ function DefaultTagSettingsTab() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Default Size</Label>
-              <Input value={form.defaultSize} onChange={e => setForm(f => f && ({ ...f, defaultSize: e.target.value }))} placeholder='e.g. 2"' className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Default Size
+              </Label>
+              <Input
+                value={form.defaultSize}
+                onChange={e =>
+                  setForm(f => f && { ...f, defaultSize: e.target.value })
+                }
+                placeholder='e.g. 2"'
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Default Rate</Label>
-              <Input value={form.defaultRate} onChange={e => setForm(f => f && ({ ...f, defaultRate: e.target.value }))} placeholder="e.g. 150#" className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Default Rate
+              </Label>
+              <Input
+                value={form.defaultRate}
+                onChange={e =>
+                  setForm(f => f && { ...f, defaultRate: e.target.value })
+                }
+                placeholder="e.g. 150#"
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Default Priority</Label>
-              <Select value={form.defaultPriority} onValueChange={v => setForm(f => f && ({ ...f, defaultPriority: v as typeof form.defaultPriority }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Default Priority
+              </Label>
+              <Select
+                value={form.defaultPriority}
+                onValueChange={v =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        defaultPriority: v as typeof form.defaultPriority,
+                      }
+                  )
+                }
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Low">Low</SelectItem>
                   <SelectItem value="Normal">Normal</SelectItem>
@@ -636,27 +1440,51 @@ function DefaultTagSettingsTab() {
       {/* Required Fields */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Required Fields</CardTitle>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Required Fields
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {[
-            { key: "requireEquipment" as const, label: "Equipment / Line Number", desc: "Require equipment or line number" },
-            { key: "requireLocation" as const, label: "Location", desc: "Require physical location" },
-            { key: "requireIsolationPoint" as const, label: "Isolation Point", desc: "Require isolation point" },
+            {
+              key: "requireEquipment" as const,
+              label: "Equipment / Line Number",
+              desc: "Require equipment or line number",
+            },
+            {
+              key: "requireLocation" as const,
+              label: "Location",
+              desc: "Require physical location",
+            },
+            {
+              key: "requireIsolationPoint" as const,
+              label: "Isolation Point",
+              desc: "Require isolation point",
+            },
           ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <div
+              key={key}
+              className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+            >
               <div>
                 <div className="text-sm font-bold text-slate-900">{label}</div>
                 <div className="text-xs text-slate-500">{desc}</div>
               </div>
-              <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+              <Switch
+                checked={form[key]}
+                onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+              />
             </div>
           ))}
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800"
+        >
           <Save className="h-4 w-4" />
           {updateMutation.isPending ? "Saving..." : "Save Tag Settings"}
         </Button>
@@ -670,45 +1498,96 @@ function DefaultTagSettingsTab() {
 function CertificateSettingsTab() {
   const { data, isLoading, refetch } = trpc.settings.certificate.get.useQuery();
   const updateMutation = trpc.settings.certificate.update.useMutation({
-    onSuccess: () => { toast.success("Certificate settings saved."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      toast.success("Certificate settings saved.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
   const uploadLogoMutation = trpc.settings.certificate.uploadLogo.useMutation({
-    onSuccess: ({ url }) => { setForm(f => f ? { ...f, logoUrl: url } : f); toast.success("Logo uploaded."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: ({ url }) => {
+      setForm(f => (f ? { ...f, logoUrl: url } : f));
+      toast.success("Logo uploaded.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
   const removeLogoMutation = trpc.settings.certificate.removeLogo.useMutation({
-    onSuccess: () => { setForm(f => f ? { ...f, logoUrl: "" } : f); toast.success("Logo removed."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      setForm(f => (f ? { ...f, logoUrl: "" } : f));
+      toast.success("Logo removed.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = (file: File) => {
-    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
-    if (!allowed.includes(file.type)) { toast.error("Use PNG, JPG, SVG, or WebP."); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error("File must be under 2MB."); return; }
+    const allowed = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/svg+xml",
+      "image/webp",
+    ];
+    if (!allowed.includes(file.type)) {
+      toast.error("Use PNG, JPG, SVG, or WebP.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File must be under 2MB.");
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       const base64 = (e.target?.result as string).split(",")[1];
-      uploadLogoMutation.mutate({ base64, mimeType: file.type as "image/png", fileName: file.name });
+      uploadLogoMutation.mutate({
+        base64,
+        mimeType: file.type as "image/png",
+        fileName: file.name,
+      });
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); const file = e.dataTransfer.files[0]; if (file) handleFileSelect(file); };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
 
   const [form, setForm] = useState<{
-    certificateTitle: string; headerCompanyName: string; headerSubtitle: string; logoUrl: string;
-    signature1Label: string; signature1Name: string; signature1Title: string;
-    signature2Label: string; signature2Name: string; signature2Title: string;
-    signature3Label: string; signature3Name: string; signature3Title: string;
-    footerText: string; showPageNumbers: boolean; showGenerationDate: boolean; showSystemVersion: boolean;
-    paperSize: "A4" | "A3" | "Letter" | "Legal"; orientation: "portrait" | "landscape";
-    showWorkflowLog: boolean; showExecutionTorque: boolean; showFinalApprovals: boolean;
-    showBlindInfo: boolean; showProjectInfo: boolean; showQrCode: boolean;
-    showLockStatus: boolean; showAreaInfo: boolean;
-    statusBadgeText: string; lockBadgeText: string;
+    certificateTitle: string;
+    headerCompanyName: string;
+    headerSubtitle: string;
+    logoUrl: string;
+    signature1Label: string;
+    signature1Name: string;
+    signature1Title: string;
+    signature2Label: string;
+    signature2Name: string;
+    signature2Title: string;
+    signature3Label: string;
+    signature3Name: string;
+    signature3Title: string;
+    footerText: string;
+    showPageNumbers: boolean;
+    showGenerationDate: boolean;
+    showSystemVersion: boolean;
+    paperSize: "A4" | "A3" | "Letter" | "Legal";
+    orientation: "portrait" | "landscape";
+    showWorkflowLog: boolean;
+    showExecutionTorque: boolean;
+    showFinalApprovals: boolean;
+    showBlindInfo: boolean;
+    showProjectInfo: boolean;
+    showQrCode: boolean;
+    showLockStatus: boolean;
+    showAreaInfo: boolean;
+    statusBadgeText: string;
+    lockBadgeText: string;
   } | null>(null);
 
   if (data && !form) {
@@ -746,7 +1625,16 @@ function CertificateSettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl bg-slate-100"
+          />
+        ))}
+      </div>
+    );
   }
 
   const handleSave = () => {
@@ -788,44 +1676,102 @@ function CertificateSettingsTab() {
       {/* Header */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Certificate Header</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Title and branding shown at the top of printed certificates</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Certificate Header
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Title and branding shown at the top of printed certificates
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Certificate Title</Label>
-              <Input value={form.certificateTitle} onChange={e => setForm(f => f && ({ ...f, certificateTitle: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Certificate Title
+              </Label>
+              <Input
+                value={form.certificateTitle}
+                onChange={e =>
+                  setForm(f => f && { ...f, certificateTitle: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Name on Certificate</Label>
-              <Input value={form.headerCompanyName} onChange={e => setForm(f => f && ({ ...f, headerCompanyName: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Name on Certificate
+              </Label>
+              <Input
+                value={form.headerCompanyName}
+                onChange={e =>
+                  setForm(f => f && { ...f, headerCompanyName: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Subtitle</Label>
-              <Input value={form.headerSubtitle} onChange={e => setForm(f => f && ({ ...f, headerSubtitle: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Subtitle
+              </Label>
+              <Input
+                value={form.headerSubtitle}
+                onChange={e =>
+                  setForm(f => f && { ...f, headerSubtitle: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Logo</Label>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Company Logo
+              </Label>
               {form.logoUrl && (
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <img src={form.logoUrl} alt="Logo" className="max-h-14 max-w-[88px] rounded-lg border object-contain" />
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeLogoMutation.mutate()} disabled={removeLogoMutation.isPending} className="text-red-500 hover:bg-red-50">
+                  <img
+                    src={form.logoUrl}
+                    alt="Logo"
+                    className="max-h-14 max-w-[88px] rounded-lg border object-contain"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeLogoMutation.mutate()}
+                    disabled={removeLogoMutation.isPending}
+                    className="text-red-500 hover:bg-red-50"
+                  >
                     <X className="h-4 w-4 mr-1" /> Remove
                   </Button>
                 </div>
               )}
               <div
                 className={`relative rounded-xl border-2 border-dashed transition-colors ${isDragging ? "border-cyan-400 bg-cyan-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragOver={e => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
               >
-                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp" className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); e.target.value = ""; }} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileSelect(f);
+                    e.target.value = "";
+                  }}
+                />
                 <div className="flex flex-col items-center gap-2 py-5 text-center">
                   <Upload className="h-5 w-5 text-slate-400" />
-                  <p className="text-xs font-semibold text-slate-700">{form.logoUrl ? "Replace logo" : "Upload logo"}</p>
-                  <p className="text-xs text-slate-400">PNG, JPG, SVG, WebP · max 2MB</p>
+                  <p className="text-xs font-semibold text-slate-700">
+                    {form.logoUrl ? "Replace logo" : "Upload logo"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    PNG, JPG, SVG, WebP · max 2MB
+                  </p>
                 </div>
               </div>
             </div>
@@ -836,40 +1782,104 @@ function CertificateSettingsTab() {
       {/* Section Visibility */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Certificate Sections</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Show or hide sections on the printed certificate</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Certificate Sections
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Show or hide sections on the printed certificate
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {[
-            { key: "showBlindInfo" as const, label: "Blind Information", desc: "Area, project, type, size, phase details" },
-            { key: "showProjectInfo" as const, label: "Project Information", desc: "Project name and metadata" },
-            { key: "showAreaInfo" as const, label: "Area Information", desc: "Area code and name" },
-            { key: "showWorkflowLog" as const, label: "Workflow Log", desc: "Phase transition history table" },
-            { key: "showExecutionTorque" as const, label: "Execution / Torque", desc: "Torque values and technician info" },
-            { key: "showFinalApprovals" as const, label: "Final Approvals", desc: "Approval signatures and dates" },
-            { key: "showQrCode" as const, label: "QR Code", desc: "Scannable QR code with certificate data" },
-            { key: "showLockStatus" as const, label: "Lock Status Badge", desc: "LOCKED / FINAL indicator" },
+            {
+              key: "showBlindInfo" as const,
+              label: "Blind Information",
+              desc: "Area, project, type, size, phase details",
+            },
+            {
+              key: "showProjectInfo" as const,
+              label: "Project Information",
+              desc: "Project name and metadata",
+            },
+            {
+              key: "showAreaInfo" as const,
+              label: "Area Information",
+              desc: "Area code and name",
+            },
+            {
+              key: "showWorkflowLog" as const,
+              label: "Workflow Log",
+              desc: "Phase transition history table",
+            },
+            {
+              key: "showExecutionTorque" as const,
+              label: "Execution / Torque",
+              desc: "Torque values and technician info",
+            },
+            {
+              key: "showFinalApprovals" as const,
+              label: "Final Approvals",
+              desc: "Approval signatures and dates",
+            },
+            {
+              key: "showQrCode" as const,
+              label: "QR Code",
+              desc: "Scannable QR code with certificate data",
+            },
+            {
+              key: "showLockStatus" as const,
+              label: "Lock Status Badge",
+              desc: "LOCKED / FINAL indicator",
+            },
           ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <div
+              key={key}
+              className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+            >
               <div className="flex items-center gap-3">
-                {form[key] ? <Eye className="h-4 w-4 text-emerald-500" /> : <EyeOff className="h-4 w-4 text-slate-300" />}
+                {form[key] ? (
+                  <Eye className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-slate-300" />
+                )}
                 <div>
-                  <div className="text-sm font-bold text-slate-900">{label}</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {label}
+                  </div>
                   <div className="text-xs text-slate-500">{desc}</div>
                 </div>
               </div>
-              <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+              <Switch
+                checked={form[key]}
+                onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+              />
             </div>
           ))}
           <Separator />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Status Badge Text</Label>
-              <Input value={form.statusBadgeText} onChange={e => setForm(f => f && ({ ...f, statusBadgeText: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Status Badge Text
+              </Label>
+              <Input
+                value={form.statusBadgeText}
+                onChange={e =>
+                  setForm(f => f && { ...f, statusBadgeText: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Lock Badge Text</Label>
-              <Input value={form.lockBadgeText} onChange={e => setForm(f => f && ({ ...f, lockBadgeText: e.target.value }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Lock Badge Text
+              </Label>
+              <Input
+                value={form.lockBadgeText}
+                onChange={e =>
+                  setForm(f => f && { ...f, lockBadgeText: e.target.value })
+                }
+                className="sbts-input"
+              />
             </div>
           </div>
         </CardContent>
@@ -878,29 +1888,64 @@ function CertificateSettingsTab() {
       {/* Signatures */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Signature Fields</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Up to three signature blocks on certificates</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Signature Fields
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Up to three signature blocks on certificates
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {([1, 2, 3] as const).map((num) => {
-            const labelKey = `signature${num}Label` as "signature1Label" | "signature2Label" | "signature3Label";
-            const nameKey = `signature${num}Name` as "signature1Name" | "signature2Name" | "signature3Name";
-            const titleKey = `signature${num}Title` as "signature1Title" | "signature2Title" | "signature3Title";
+          {([1, 2, 3] as const).map(num => {
+            const labelKey = `signature${num}Label` as
+              "signature1Label" | "signature2Label" | "signature3Label";
+            const nameKey = `signature${num}Name` as
+              "signature1Name" | "signature2Name" | "signature3Name";
+            const titleKey = `signature${num}Title` as
+              "signature1Title" | "signature2Title" | "signature3Title";
             return (
-              <div key={num} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <div className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Signature {num}</div>
+              <div
+                key={num}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Signature {num}
+                </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-500">Label</Label>
-                    <Input value={form[labelKey]} onChange={e => setForm(f => f && ({ ...f, [labelKey]: e.target.value }))} placeholder="e.g. Prepared By" className="sbts-input bg-white" />
+                    <Input
+                      value={form[labelKey]}
+                      onChange={e =>
+                        setForm(f => f && { ...f, [labelKey]: e.target.value })
+                      }
+                      placeholder="e.g. Prepared By"
+                      className="sbts-input bg-white"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-500">Name</Label>
-                    <Input value={form[nameKey]} onChange={e => setForm(f => f && ({ ...f, [nameKey]: e.target.value }))} placeholder="Full name" className="sbts-input bg-white" />
+                    <Input
+                      value={form[nameKey]}
+                      onChange={e =>
+                        setForm(f => f && { ...f, [nameKey]: e.target.value })
+                      }
+                      placeholder="Full name"
+                      className="sbts-input bg-white"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-slate-500">Title / Role</Label>
-                    <Input value={form[titleKey]} onChange={e => setForm(f => f && ({ ...f, [titleKey]: e.target.value }))} placeholder="Job title" className="sbts-input bg-white" />
+                    <Label className="text-xs text-slate-500">
+                      Title / Role
+                    </Label>
+                    <Input
+                      value={form[titleKey]}
+                      onChange={e =>
+                        setForm(f => f && { ...f, [titleKey]: e.target.value })
+                      }
+                      placeholder="Job title"
+                      className="sbts-input bg-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -912,14 +1957,27 @@ function CertificateSettingsTab() {
       {/* Print Options */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Print Options</CardTitle>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Print Options
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Paper Size</Label>
-              <Select value={form.paperSize} onValueChange={v => setForm(f => f && ({ ...f, paperSize: v as typeof form.paperSize }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Paper Size
+              </Label>
+              <Select
+                value={form.paperSize}
+                onValueChange={v =>
+                  setForm(
+                    f => f && { ...f, paperSize: v as typeof form.paperSize }
+                  )
+                }
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
                   <SelectItem value="A3">A3 (297 x 420 mm)</SelectItem>
@@ -929,9 +1987,21 @@ function CertificateSettingsTab() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Orientation</Label>
-              <Select value={form.orientation} onValueChange={v => setForm(f => f && ({ ...f, orientation: v as typeof form.orientation }))}>
-                <SelectTrigger className="sbts-input"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Orientation
+              </Label>
+              <Select
+                value={form.orientation}
+                onValueChange={v =>
+                  setForm(
+                    f =>
+                      f && { ...f, orientation: v as typeof form.orientation }
+                  )
+                }
+              >
+                <SelectTrigger className="sbts-input">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="portrait">Portrait</SelectItem>
                   <SelectItem value="landscape">Landscape</SelectItem>
@@ -939,19 +2009,40 @@ function CertificateSettingsTab() {
               </Select>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Footer Text</Label>
-              <Textarea value={form.footerText} onChange={e => setForm(f => f && ({ ...f, footerText: e.target.value }))} rows={2} className="sbts-input resize-none" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Footer Text
+              </Label>
+              <Textarea
+                value={form.footerText}
+                onChange={e =>
+                  setForm(f => f && { ...f, footerText: e.target.value })
+                }
+                rows={2}
+                className="sbts-input resize-none"
+              />
             </div>
           </div>
           <div className="space-y-3">
             {[
               { key: "showPageNumbers" as const, label: "Show Page Numbers" },
-              { key: "showGenerationDate" as const, label: "Show Generation Date" },
-              { key: "showSystemVersion" as const, label: "Show System Version" },
+              {
+                key: "showGenerationDate" as const,
+                label: "Show Generation Date",
+              },
+              {
+                key: "showSystemVersion" as const,
+                label: "Show System Version",
+              },
             ].map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <div
+                key={key}
+                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+              >
                 <div className="text-sm font-bold text-slate-900">{label}</div>
-                <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+                <Switch
+                  checked={form[key]}
+                  onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+                />
               </div>
             ))}
           </div>
@@ -959,7 +2050,11 @@ function CertificateSettingsTab() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800"
+        >
           <Save className="h-4 w-4" />
           {updateMutation.isPending ? "Saving..." : "Save Certificate Settings"}
         </Button>
@@ -973,16 +2068,26 @@ function CertificateSettingsTab() {
 function SecuritySettingsTab() {
   const { data, isLoading, refetch } = trpc.settings.security.get.useQuery();
   const updateMutation = trpc.settings.security.update.useMutation({
-    onSuccess: () => { toast.success("Security settings saved."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      toast.success("Security settings saved.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
 
   const [form, setForm] = useState<{
-    qrPublicAccess: boolean; qrRequireAuth: boolean;
-    allowDeleteBlinds: boolean; allowDeleteProjects: boolean; requireDeleteConfirmation: boolean;
-    auditTrailEnabled: boolean; auditRetentionDays: number;
-    sessionTimeoutMinutes: number; maxLoginAttempts: number; lockoutDurationMinutes: number;
-    requireStrongPassword: boolean; minPasswordLength: number;
+    qrPublicAccess: boolean;
+    qrRequireAuth: boolean;
+    allowDeleteBlinds: boolean;
+    allowDeleteProjects: boolean;
+    requireDeleteConfirmation: boolean;
+    auditTrailEnabled: boolean;
+    auditRetentionDays: number;
+    sessionTimeoutMinutes: number;
+    maxLoginAttempts: number;
+    lockoutDurationMinutes: number;
+    requireStrongPassword: boolean;
+    minPasswordLength: number;
   } | null>(null);
 
   if (data && !form) {
@@ -1003,7 +2108,16 @@ function SecuritySettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl bg-slate-100"
+          />
+        ))}
+      </div>
+    );
   }
 
   const handleSave = () => updateMutation.mutate(form);
@@ -1013,23 +2127,45 @@ function SecuritySettingsTab() {
       {/* QR Access */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">QR Code Access</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Control who can access blind information via QR scan</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            QR Code Access
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Control who can access blind information via QR scan
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <div className="text-sm font-bold text-slate-900">Public QR Access</div>
-              <div className="text-xs text-slate-500">Allow unauthenticated users to view blind status via QR</div>
+              <div className="text-sm font-bold text-slate-900">
+                Public QR Access
+              </div>
+              <div className="text-xs text-slate-500">
+                Allow unauthenticated users to view blind status via QR
+              </div>
             </div>
-            <Switch checked={form.qrPublicAccess} onCheckedChange={v => setForm(f => f && ({ ...f, qrPublicAccess: v }))} />
+            <Switch
+              checked={form.qrPublicAccess}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, qrPublicAccess: v })
+              }
+            />
           </div>
           <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <div className="text-sm font-bold text-slate-900">Require Authentication for QR</div>
-              <div className="text-xs text-slate-500">Force login before showing detailed blind data</div>
+              <div className="text-sm font-bold text-slate-900">
+                Require Authentication for QR
+              </div>
+              <div className="text-xs text-slate-500">
+                Force login before showing detailed blind data
+              </div>
             </div>
-            <Switch checked={form.qrRequireAuth} onCheckedChange={v => setForm(f => f && ({ ...f, qrRequireAuth: v }))} />
+            <Switch
+              checked={form.qrRequireAuth}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, qrRequireAuth: v })
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -1037,21 +2173,43 @@ function SecuritySettingsTab() {
       {/* Delete Policies */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Delete Policies</CardTitle>
-          <CardDescription className="text-xs text-slate-500">Control destructive operations</CardDescription>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Delete Policies
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Control destructive operations
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {[
-            { key: "allowDeleteBlinds" as const, label: "Allow Delete Blinds", desc: "Permit permanent deletion of blind records" },
-            { key: "allowDeleteProjects" as const, label: "Allow Delete Projects", desc: "Permit permanent deletion of projects" },
-            { key: "requireDeleteConfirmation" as const, label: "Require Delete Confirmation", desc: "Show confirmation dialog before any delete" },
+            {
+              key: "allowDeleteBlinds" as const,
+              label: "Allow Delete Blinds",
+              desc: "Permit permanent deletion of blind records",
+            },
+            {
+              key: "allowDeleteProjects" as const,
+              label: "Allow Delete Projects",
+              desc: "Permit permanent deletion of projects",
+            },
+            {
+              key: "requireDeleteConfirmation" as const,
+              label: "Require Delete Confirmation",
+              desc: "Show confirmation dialog before any delete",
+            },
           ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <div
+              key={key}
+              className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+            >
               <div>
                 <div className="text-sm font-bold text-slate-900">{label}</div>
                 <div className="text-xs text-slate-500">{desc}</div>
               </div>
-              <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+              <Switch
+                checked={form[key]}
+                onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+              />
             </div>
           ))}
         </CardContent>
@@ -1060,19 +2218,47 @@ function SecuritySettingsTab() {
       {/* Audit Trail */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Audit Trail</CardTitle>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Audit Trail
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <div className="text-sm font-bold text-slate-900">Enable Audit Trail</div>
-              <div className="text-xs text-slate-500">Log all user actions for compliance</div>
+              <div className="text-sm font-bold text-slate-900">
+                Enable Audit Trail
+              </div>
+              <div className="text-xs text-slate-500">
+                Log all user actions for compliance
+              </div>
             </div>
-            <Switch checked={form.auditTrailEnabled} onCheckedChange={v => setForm(f => f && ({ ...f, auditTrailEnabled: v }))} />
+            <Switch
+              checked={form.auditTrailEnabled}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, auditTrailEnabled: v })
+              }
+            />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Retention (days)</Label>
-            <Input type="number" min={7} max={365} value={form.auditRetentionDays} onChange={e => setForm(f => f && ({ ...f, auditRetentionDays: parseInt(e.target.value) || 90 }))} className="sbts-input w-32" />
+            <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Retention (days)
+            </Label>
+            <Input
+              type="number"
+              min={7}
+              max={365}
+              value={form.auditRetentionDays}
+              onChange={e =>
+                setForm(
+                  f =>
+                    f && {
+                      ...f,
+                      auditRetentionDays: parseInt(e.target.value) || 90,
+                    }
+                )
+              }
+              className="sbts-input w-32"
+            />
           </div>
         </CardContent>
       </Card>
@@ -1080,39 +2266,122 @@ function SecuritySettingsTab() {
       {/* Session & Password */}
       <Card className="sbts-card">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">Session & Password Policy</CardTitle>
+          <CardTitle className="text-base font-extrabold text-slate-950">
+            Session & Password Policy
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Session Timeout (minutes)</Label>
-              <Input type="number" min={15} max={1440} value={form.sessionTimeoutMinutes} onChange={e => setForm(f => f && ({ ...f, sessionTimeoutMinutes: parseInt(e.target.value) || 480 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Session Timeout (minutes)
+              </Label>
+              <Input
+                type="number"
+                min={15}
+                max={1440}
+                value={form.sessionTimeoutMinutes}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        sessionTimeoutMinutes: parseInt(e.target.value) || 480,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Max Login Attempts</Label>
-              <Input type="number" min={3} max={20} value={form.maxLoginAttempts} onChange={e => setForm(f => f && ({ ...f, maxLoginAttempts: parseInt(e.target.value) || 5 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Max Login Attempts
+              </Label>
+              <Input
+                type="number"
+                min={3}
+                max={20}
+                value={form.maxLoginAttempts}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        maxLoginAttempts: parseInt(e.target.value) || 5,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Lockout Duration (minutes)</Label>
-              <Input type="number" min={5} max={60} value={form.lockoutDurationMinutes} onChange={e => setForm(f => f && ({ ...f, lockoutDurationMinutes: parseInt(e.target.value) || 15 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Lockout Duration (minutes)
+              </Label>
+              <Input
+                type="number"
+                min={5}
+                max={60}
+                value={form.lockoutDurationMinutes}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        lockoutDurationMinutes: parseInt(e.target.value) || 15,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Min Password Length</Label>
-              <Input type="number" min={6} max={32} value={form.minPasswordLength} onChange={e => setForm(f => f && ({ ...f, minPasswordLength: parseInt(e.target.value) || 8 }))} className="sbts-input" />
+              <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Min Password Length
+              </Label>
+              <Input
+                type="number"
+                min={6}
+                max={32}
+                value={form.minPasswordLength}
+                onChange={e =>
+                  setForm(
+                    f =>
+                      f && {
+                        ...f,
+                        minPasswordLength: parseInt(e.target.value) || 8,
+                      }
+                  )
+                }
+                className="sbts-input"
+              />
             </div>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <div className="text-sm font-bold text-slate-900">Require Strong Password</div>
-              <div className="text-xs text-slate-500">Enforce uppercase, lowercase, number, and special character</div>
+              <div className="text-sm font-bold text-slate-900">
+                Require Strong Password
+              </div>
+              <div className="text-xs text-slate-500">
+                Enforce uppercase, lowercase, number, and special character
+              </div>
             </div>
-            <Switch checked={form.requireStrongPassword} onCheckedChange={v => setForm(f => f && ({ ...f, requireStrongPassword: v }))} />
+            <Switch
+              checked={form.requireStrongPassword}
+              onCheckedChange={v =>
+                setForm(f => f && { ...f, requireStrongPassword: v })
+              }
+            />
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800"
+        >
           <Save className="h-4 w-4" />
           {updateMutation.isPending ? "Saving..." : "Save Security Settings"}
         </Button>
@@ -1124,17 +2393,28 @@ function SecuritySettingsTab() {
 // ─── Notification Settings Tab ────────────────────────────────────────────────
 
 function NotificationSettingsTab() {
-  const { data, isLoading, refetch } = trpc.settings.notifications.get.useQuery();
+  const { data, isLoading, refetch } =
+    trpc.settings.notifications.get.useQuery();
   const updateMutation = trpc.settings.notifications.update.useMutation({
-    onSuccess: () => { toast.success("Notification preferences saved."); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: () => {
+      toast.success("Notification preferences saved.");
+      refetch();
+    },
+    onError: e => toast.error(e.message),
   });
 
   const [form, setForm] = useState<{
-    registrationRequest: boolean; registrationApproved: boolean; registrationRejected: boolean;
-    blindPhaseChanged: boolean; blindPhaseApproval: boolean; blindAssigned: boolean;
-    projectCreated: boolean; projectStatusChanged: boolean; phaseOwnerAssigned: boolean;
-    workflowUpdated: boolean; systemAnnouncement: boolean;
+    registrationRequest: boolean;
+    registrationApproved: boolean;
+    registrationRejected: boolean;
+    blindPhaseChanged: boolean;
+    blindPhaseApproval: boolean;
+    blindAssigned: boolean;
+    projectCreated: boolean;
+    projectStatusChanged: boolean;
+    phaseOwnerAssigned: boolean;
+    workflowUpdated: boolean;
+    systemAnnouncement: boolean;
   } | null>(null);
 
   if (data && !form) {
@@ -1154,54 +2434,131 @@ function NotificationSettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl bg-slate-100"
+          />
+        ))}
+      </div>
+    );
   }
 
   const handleSave = () => updateMutation.mutate(form);
 
   const categories = [
-    { title: "Registration Events", items: [
-      { key: "registrationRequest" as const, label: "New Registration Request", desc: "When a new user submits registration" },
-      { key: "registrationApproved" as const, label: "Registration Approved", desc: "When admin approves a user" },
-      { key: "registrationRejected" as const, label: "Registration Rejected", desc: "When admin rejects a user" },
-    ]},
-    { title: "Blind & Phase Events", items: [
-      { key: "blindPhaseChanged" as const, label: "Phase Changed", desc: "When a blind moves to a new phase" },
-      { key: "blindPhaseApproval" as const, label: "Phase Approval", desc: "When electronic approval is submitted" },
-      { key: "blindAssigned" as const, label: "Blind Assigned", desc: "When a blind is assigned to a user" },
-    ]},
-    { title: "Project Events", items: [
-      { key: "projectCreated" as const, label: "Project Created", desc: "When a new project is created" },
-      { key: "projectStatusChanged" as const, label: "Project Status Changed", desc: "When project status is updated" },
-      { key: "phaseOwnerAssigned" as const, label: "Phase Owner Assigned", desc: "When user is assigned as phase owner" },
-    ]},
-    { title: "System Events", items: [
-      { key: "workflowUpdated" as const, label: "Workflow Updated", desc: "When workflow template is modified" },
-      { key: "systemAnnouncement" as const, label: "System Announcement", desc: "General system announcements" },
-    ]},
+    {
+      title: "Registration Events",
+      items: [
+        {
+          key: "registrationRequest" as const,
+          label: "New Registration Request",
+          desc: "When a new user submits registration",
+        },
+        {
+          key: "registrationApproved" as const,
+          label: "Registration Approved",
+          desc: "When admin approves a user",
+        },
+        {
+          key: "registrationRejected" as const,
+          label: "Registration Rejected",
+          desc: "When admin rejects a user",
+        },
+      ],
+    },
+    {
+      title: "Blind & Phase Events",
+      items: [
+        {
+          key: "blindPhaseChanged" as const,
+          label: "Phase Changed",
+          desc: "When a blind moves to a new phase",
+        },
+        {
+          key: "blindPhaseApproval" as const,
+          label: "Phase Approval",
+          desc: "When electronic approval is submitted",
+        },
+        {
+          key: "blindAssigned" as const,
+          label: "Blind Assigned",
+          desc: "When a blind is assigned to a user",
+        },
+      ],
+    },
+    {
+      title: "Project Events",
+      items: [
+        {
+          key: "projectCreated" as const,
+          label: "Project Created",
+          desc: "When a new project is created",
+        },
+        {
+          key: "projectStatusChanged" as const,
+          label: "Project Status Changed",
+          desc: "When project status is updated",
+        },
+        {
+          key: "phaseOwnerAssigned" as const,
+          label: "Phase Owner Assigned",
+          desc: "When user is assigned as phase owner",
+        },
+      ],
+    },
+    {
+      title: "System Events",
+      items: [
+        {
+          key: "workflowUpdated" as const,
+          label: "Workflow Updated",
+          desc: "When workflow template is modified",
+        },
+        {
+          key: "systemAnnouncement" as const,
+          label: "System Announcement",
+          desc: "General system announcements",
+        },
+      ],
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> These settings control which operational events generate in-app notifications. Email and Teams integrations can be attached later.
+          <strong>Note:</strong> These settings control which operational events
+          generate in-app notifications. Email and Teams integrations can be
+          attached later.
         </p>
       </div>
 
       {categories.map(({ title, items }) => (
         <Card key={title} className="sbts-card">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base font-extrabold text-slate-950">{title}</CardTitle>
+            <CardTitle className="text-base font-extrabold text-slate-950">
+              {title}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {items.map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <div
+                key={key}
+                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+              >
                 <div>
-                  <div className="text-sm font-bold text-slate-900">{label}</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {label}
+                  </div>
                   <div className="text-xs text-slate-500">{desc}</div>
                 </div>
-                <Switch checked={form[key]} onCheckedChange={v => setForm(f => f && ({ ...f, [key]: v }))} />
+                <Switch
+                  checked={form[key]}
+                  onCheckedChange={v => setForm(f => f && { ...f, [key]: v })}
+                />
               </div>
             ))}
           </CardContent>
@@ -1209,9 +2566,15 @@ function NotificationSettingsTab() {
       ))}
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2 rounded-2xl bg-slate-950 px-6 font-bold text-white hover:bg-slate-800"
+        >
           <Save className="h-4 w-4" />
-          {updateMutation.isPending ? "Saving..." : "Save Notification Settings"}
+          {updateMutation.isPending
+            ? "Saving..."
+            : "Save Notification Settings"}
         </Button>
       </div>
     </div>
@@ -1248,10 +2611,20 @@ export default function SystemSettings() {
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
-                  <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${activeTab === key ? "text-cyan-300" : "text-slate-400"}`} />
+                  <Icon
+                    className={`mt-0.5 h-4 w-4 shrink-0 ${activeTab === key ? "text-cyan-300" : "text-slate-400"}`}
+                  />
                   <div>
-                    <div className={`text-sm font-bold ${activeTab === key ? "text-white" : "text-slate-900"}`}>{label}</div>
-                    <div className={`text-xs ${activeTab === key ? "text-slate-300" : "text-slate-500"}`}>{description}</div>
+                    <div
+                      className={`text-sm font-bold ${activeTab === key ? "text-white" : "text-slate-900"}`}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      className={`text-xs ${activeTab === key ? "text-slate-300" : "text-slate-500"}`}
+                    >
+                      {description}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -1263,9 +2636,12 @@ export default function SystemSettings() {
         <div className="min-w-0 flex-1">
           <div className="mb-4 flex items-center gap-2">
             <ActiveIcon className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-bold text-slate-700">{tabs.find(t => t.key === activeTab)?.label}</span>
+            <span className="text-sm font-bold text-slate-700">
+              {tabs.find(t => t.key === activeTab)?.label}
+            </span>
           </div>
           {activeTab === "general" && <GeneralSettingsTab />}
+          {activeTab === "appearance" && <AppearanceSettingsTab />}
           {activeTab === "defaultTag" && <DefaultTagSettingsTab />}
           {activeTab === "certificate" && <CertificateSettingsTab />}
           {activeTab === "security" && <SecuritySettingsTab />}
