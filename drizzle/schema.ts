@@ -787,4 +787,43 @@ export type InsertBlindRiskAssessment = typeof blindRiskAssessments.$inferInsert
 export type BlindPtwLotoRecordRow = typeof blindPtwLotoRecords.$inferSelect;
 export type InsertBlindPtwLotoRecord = typeof blindPtwLotoRecords.$inferInsert;
 
+/** Offline mobile drafts captured from field devices before network sync. */
+export const fieldOfflineDrafts = mysqlTable("field_offline_drafts", {
+  id: int("id").autoincrement().primaryKey(),
+  draftId: varchar("draftId", { length: 96 }).notNull().unique(),
+  projectId: varchar("projectId", { length: 40 }),
+  blindTag: varchar("blindTag", { length: 40 }),
+  draftType: varchar("draftType", { length: 80 }).notNull(),
+  payloadJson: text("payloadJson").notNull(),
+  status: varchar("status", { length: 40 }).default("queued").notNull(),
+  deviceId: varchar("deviceId", { length: 160 }),
+  clientCreatedAt: timestamp("clientCreatedAt"),
+  syncedByOpenId: varchar("syncedByOpenId", { length: 64 }),
+  syncedByName: varchar("syncedByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Shift handover records for supervisor, inspection, safety, and maintenance continuity. */
+export const shiftHandoverRecords = mysqlTable("shift_handover_records", {
+  id: int("id").autoincrement().primaryKey(),
+  shiftDate: date("shiftDate").notNull(),
+  shiftName: varchar("shiftName", { length: 120 }).notNull(),
+  areaCode: varchar("areaCode", { length: 80 }),
+  projectId: varchar("projectId", { length: 40 }),
+  summary: text("summary").notNull(),
+  openRisksJson: text("openRisksJson"),
+  prioritiesJson: text("prioritiesJson"),
+  handoverToName: varchar("handoverToName", { length: 200 }),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FieldOfflineDraftRow = typeof fieldOfflineDrafts.$inferSelect;
+export type InsertFieldOfflineDraft = typeof fieldOfflineDrafts.$inferInsert;
+export type ShiftHandoverRecordRow = typeof shiftHandoverRecords.$inferSelect;
+export type InsertShiftHandoverRecord = typeof shiftHandoverRecords.$inferInsert;
+
 

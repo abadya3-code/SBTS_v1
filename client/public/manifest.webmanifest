@@ -1,0 +1,19 @@
+{
+  "name": "SBTS Professional Field Mobile",
+  "short_name": "SBTS Field",
+  "description": "Smart Blind Tracking System field mobile workspace for QR, compliance, offline drafts, and shift handover.",
+  "start_url": "/mobile",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/sbts-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import {
   blindPtwLotoRecords,
   qrBlindTokens,
   qrScanLogs,
+  fieldOfflineDrafts,
+  shiftHandoverRecords,
   blinds,
   projects,
 } from "../../drizzle/schema";
@@ -90,6 +92,15 @@ function parseJsonArray<T>(json: string | null | undefined, fallback: T[]): T[] 
   try {
     const parsed = JSON.parse(json);
     return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseJson<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
   } catch {
     return fallback;
   }
@@ -469,5 +480,127 @@ export async function getComplianceSummary(days = 30) {
     latestRiskAssessments: riskRows,
     latestPtwLoto: ptwLotoRows,
     latestQrTokens: qrTokenRows,
+  };
+}
+
+
+export async function saveFieldOfflineDraft(input: {
+  draftId: string;
+  projectId?: string | null;
+  blindTag?: string | null;
+  draftType: string;
+  payload: unknown;
+  status?: string;
+  deviceId?: string | null;
+  clientCreatedAt?: string | Date | null;
+  actor: ComplianceActor;
+}) {
+  const db = await requireDb();
+  const now = new Date();
+  const values = {
+    draftId: input.draftId,
+    projectId: input.projectId ?? null,
+    blindTag: input.blindTag ?? null,
+    draftType: input.draftType,
+    payloadJson: JSON.stringify(input.payload ?? {}),
+    status: input.status ?? "synced",
+    deviceId: input.deviceId ?? null,
+    clientCreatedAt: input.clientCreatedAt ? new Date(input.clientCreatedAt) : null,
+    syncedByOpenId: input.actor.openId,
+    syncedByName: input.actor.name ?? input.actor.email ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.insert(fieldOfflineDrafts).values(values).onDuplicateKeyUpdate({
+    set: {
+      projectId: values.projectId,
+      blindTag: values.blindTag,
+      draftType: values.draftType,
+      payloadJson: values.payloadJson,
+      status: values.status,
+      deviceId: values.deviceId,
+      syncedByOpenId: values.syncedByOpenId,
+      syncedByName: values.syncedByName,
+      updatedAt: now,
+    },
+  });
+  return { success: true, draftId: input.draftId };
+}
+
+export async function getFieldOfflineDrafts(input?: { limit?: number; status?: string }) {
+  const db = await requireDb();
+  const limit = Math.min(Math.max(input?.limit ?? 50, 1), 200);
+  const rows = input?.status && input.status !== "all"
+    ? await db.select().from(fieldOfflineDrafts).where(eq(fieldOfflineDrafts.status, input.status)).orderBy(desc(fieldOfflineDrafts.updatedAt)).limit(limit)
+    : await db.select().from(fieldOfflineDrafts).orderBy(desc(fieldOfflineDrafts.updatedAt)).limit(limit);
+  return rows.map((row) => ({
+    ...row,
+    payload: parseJson(row.payloadJson, {}),
+  }));
+}
+
+export async function submitShiftHandover(input: {
+  shiftDate: string | Date;
+  shiftName: string;
+  areaCode?: string | null;
+  projectId?: string | null;
+  summary: string;
+  openRisks?: string[];
+  priorities?: string[];
+  handoverToName?: string | null;
+  actor: ComplianceActor;
+}) {
+  const db = await requireDb();
+  const now = new Date();
+  const shiftDate = input.shiftDate instanceof Date
+    ? input.shiftDate.toISOString().slice(0, 10)
+    : String(input.shiftDate).slice(0, 10);
+  await db.insert(shiftHandoverRecords).values({
+    shiftDate,
+    shiftName: input.shiftName,
+    areaCode: input.areaCode ?? null,
+    projectId: input.projectId ?? null,
+    summary: input.summary,
+    openRisksJson: JSON.stringify(input.openRisks ?? []),
+    prioritiesJson: JSON.stringify(input.priorities ?? []),
+    handoverToName: input.handoverToName ?? null,
+    createdByOpenId: input.actor.openId,
+    createdByName: input.actor.name ?? input.actor.email ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return { success: true };
+}
+
+export async function getShiftHandovers(input?: { limit?: number }) {
+  const db = await requireDb();
+  const limit = Math.min(Math.max(input?.limit ?? 25, 1), 100);
+  const rows = await db.select().from(shiftHandoverRecords).orderBy(desc(shiftHandoverRecords.createdAt)).limit(limit);
+  return rows.map((row) => ({
+    ...row,
+    openRisks: parseJson(row.openRisksJson, []),
+    priorities: parseJson(row.prioritiesJson, []),
+  }));
+}
+
+export async function getFieldMobileSummary(days = 7) {
+  const compliance = await getComplianceSummary(days);
+  const [drafts, handovers] = await Promise.all([
+    getFieldOfflineDrafts({ limit: 100 }),
+    getShiftHandovers({ limit: 25 }),
+  ]);
+  return {
+    days,
+    complianceCounts: compliance.counts,
+    offlineDrafts: {
+      total: drafts.length,
+      synced: drafts.filter((row) => row.status === "synced").length,
+      queued: drafts.filter((row) => row.status !== "synced").length,
+    },
+    handovers: {
+      total: handovers.length,
+      latest: handovers.slice(0, 5),
+    },
+    expiring: compliance.expiring.slice(0, 10),
   };
 }

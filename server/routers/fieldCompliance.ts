@@ -11,9 +11,14 @@ import {
   getComplianceSummary,
   getDefaultChecklistItems,
   getDefaultRiskModel,
+  getFieldMobileSummary,
+  getFieldOfflineDrafts,
+  getShiftHandovers,
   logAuditEvent,
+  saveFieldOfflineDraft,
   saveRiskAssessment,
   saveSafetyChecklist,
+  submitShiftHandover,
   verifyQrToken,
 } from "../db";
 
@@ -54,6 +59,53 @@ async function writeAudit(ctx: any, action: string, entityId: string, after: unk
 }
 
 export const fieldComplianceRouter = router({
+
+
+  mobileSummary: permissionProcedure("compliance.view")
+    .input(z.object({ days: z.number().int().min(1).max(90).default(7) }).optional())
+    .query(async ({ input }) => getFieldMobileSummary(input?.days ?? 7)),
+
+  offlineDrafts: permissionProcedure("compliance.view")
+    .input(z.object({ limit: z.number().int().min(1).max(200).default(50), status: z.string().optional() }).optional())
+    .query(async ({ input }) => getFieldOfflineDrafts(input ?? undefined)),
+
+  saveOfflineDraft: permissionProcedure("compliance.manage")
+    .input(z.object({
+      draftId: z.string().min(4).max(96),
+      projectId: z.string().max(40).nullable().optional(),
+      blindTag: z.string().max(40).nullable().optional(),
+      draftType: z.string().min(1).max(80),
+      payload: z.unknown(),
+      status: z.string().max(40).default("synced"),
+      deviceId: z.string().max(160).nullable().optional(),
+      clientCreatedAt: z.coerce.date().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await saveFieldOfflineDraft({ ...input, actor: actorFromContext(ctx) });
+      await writeAudit(ctx, "field.offline_draft.sync", input.draftId, { projectId: input.projectId, blindTag: input.blindTag, draftType: input.draftType });
+      return result;
+    }),
+
+  shiftHandovers: permissionProcedure("compliance.view")
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(25) }).optional())
+    .query(async ({ input }) => getShiftHandovers(input ?? undefined)),
+
+  submitShiftHandover: permissionProcedure("compliance.manage")
+    .input(z.object({
+      shiftDate: z.coerce.date(),
+      shiftName: z.string().min(1).max(120),
+      areaCode: z.string().max(80).nullable().optional(),
+      projectId: z.string().max(40).nullable().optional(),
+      summary: z.string().min(5).max(4000),
+      openRisks: z.array(z.string().max(500)).max(50).default([]),
+      priorities: z.array(z.string().max(500)).max(50).default([]),
+      handoverToName: z.string().max(200).nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await submitShiftHandover({ ...input, actor: actorFromContext(ctx) });
+      await writeAudit(ctx, "field.shift_handover.submit", input.shiftName, { shiftDate: input.shiftDate, projectId: input.projectId, areaCode: input.areaCode });
+      return result;
+    }),
   defaultChecklist: permissionProcedure("compliance.view").query(async () => getDefaultChecklistItems()),
 
   summary: permissionProcedure("compliance.view")

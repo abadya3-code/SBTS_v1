@@ -1,0 +1,201 @@
+{
+  "version": "2.2.0",
+  "routes": [
+    {
+      "path": "/login",
+      "component": "Login"
+    },
+    {
+      "path": "/register",
+      "component": "Register"
+    },
+    {
+      "path": "/approve",
+      "component": "Approve"
+    },
+    {
+      "path": "/certificate/:projectId/:tag",
+      "component": "BlindCertificate"
+    },
+    {
+      "path": "/qr/blind/:token",
+      "component": "FieldVerification"
+    },
+    {
+      "path": "/",
+      "component": "Dashboard"
+    },
+    {
+      "path": "/dashboard",
+      "component": "Dashboard"
+    },
+    {
+      "path": "/areas",
+      "component": "Areas"
+    },
+    {
+      "path": "/areas/:areaId/projects/:projectId/blinds/:tag",
+      "component": "BlindDetail"
+    },
+    {
+      "path": "/areas/:areaId/projects/:projectId",
+      "component": "ProjectDetail"
+    },
+    {
+      "path": "/areas/:areaId/projects",
+      "component": "Projects"
+    },
+    {
+      "path": "/projects/:projectId/blinds/:tag",
+      "component": "BlindDetail"
+    },
+    {
+      "path": "/projects/:projectId",
+      "component": "ProjectDetail"
+    },
+    {
+      "path": "/projects",
+      "component": "Projects"
+    },
+    {
+      "path": "/blinds",
+      "component": "Blinds"
+    },
+    {
+      "path": "/workflow-studio",
+      "component": "WorkflowStudio"
+    },
+    {
+      "path": "/access-control",
+      "component": "AccessControl"
+    },
+    {
+      "path": "/users",
+      "component": "UserManagement"
+    },
+    {
+      "path": "/settings",
+      "component": "SystemSettings"
+    },
+    {
+      "path": "/notifications",
+      "component": "Notifications"
+    },
+    {
+      "path": "/reports",
+      "component": "Reports"
+    },
+    {
+      "path": "/audit",
+      "component": "AuditCenter"
+    },
+    {
+      "path": "/compliance",
+      "component": "ComplianceCenter"
+    },
+    {
+      "path": "/field",
+      "component": "FieldExecutionCenter"
+    },
+    {
+      "path": "/mobile",
+      "component": "MobileOfflineCenter"
+    },
+    {
+      "path": "/profile",
+      "component": "UserProfile"
+    }
+  ],
+  "missingImports": [],
+  "arabicExecutableCharacters": 0,
+  "newTables": [
+    "field_offline_drafts",
+    "shift_handover_records"
+  ],
+  "newRoutes": [
+    "/mobile"
+  ],
+  "newMigration": "0015_field_mobile_offline_handover",
+  "largePages": [
+    [
+      "SystemSettings.tsx",
+      2676
+    ],
+    [
+      "ProjectDetail.tsx",
+      1873
+    ],
+    [
+      "Reports.tsx",
+      1058
+    ],
+    [
+      "UserManagement.tsx",
+      953
+    ],
+    [
+      "Blinds.tsx",
+      919
+    ],
+    [
+      "UserProfile.tsx",
+      726
+    ],
+    [
+      "WorkflowStudio.tsx",
+      583
+    ],
+    [
+      "Register.tsx",
+      560
+    ],
+    [
+      "Dashboard.tsx",
+      381
+    ],
+    [
+      "Login.tsx",
+      336
+    ],
+    [
+      "ComplianceCenter.tsx",
+      324
+    ],
+    [
+      "AccessControl.tsx",
+      319
+    ],
+    [
+      "Approve.tsx",
+      297
+    ],
+    [
+      "Notifications.tsx",
+      292
+    ],
+    [
+      "BlindCertificate.tsx",
+      282
+    ],
+    [
+      "MobileOfflineCenter.tsx",
+      269
+    ],
+    [
+      "AuditCenter.tsx",
+      246
+    ],
+    [
+      "Projects.tsx",
+      243
+    ],
+    [
+      "FieldExecutionCenter.tsx",
+      231
+    ],
+    [
+      "BlindDetail.tsx",
+      224
+    ]
+  ]
+}
