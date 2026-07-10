@@ -216,3 +216,15 @@ export {
   submitShiftHandover,
   verifyQrToken,
 } from "./fieldCompliance";
+
+
+// Management / Planning
+export {
+  createDailyProgressReport,
+  createResourcePlanEntry,
+  getDailyProgressReports,
+  getManagementSummary,
+  getResourcePlanEntries,
+  getSlaRules,
+  upsertSlaRule,
+} from "./management";

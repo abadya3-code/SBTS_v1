@@ -826,4 +826,65 @@ export type InsertFieldOfflineDraft = typeof fieldOfflineDrafts.$inferInsert;
 export type ShiftHandoverRecordRow = typeof shiftHandoverRecords.$inferSelect;
 export type InsertShiftHandoverRecord = typeof shiftHandoverRecords.$inferInsert;
 
+/** Management daily progress reports for supervisors, planners, and leadership. */
+export const managementDailyReports = mysqlTable("management_daily_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  reportDate: date("reportDate").notNull(),
+  shiftName: varchar("shiftName", { length: 120 }).notNull(),
+  areaCode: varchar("areaCode", { length: 80 }),
+  projectId: varchar("projectId", { length: 40 }),
+  progressSummary: text("progressSummary").notNull(),
+  completedCount: int("completedCount").default(0).notNull(),
+  inProgressCount: int("inProgressCount").default(0).notNull(),
+  overdueCount: int("overdueCount").default(0).notNull(),
+  safetyHighlights: text("safetyHighlights"),
+  nextPlan: text("nextPlan"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Resource planning entries for manpower, equipment, materials, and inspection needs. */
+export const resourcePlanEntries = mysqlTable("resource_plan_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: varchar("projectId", { length: 40 }),
+  areaCode: varchar("areaCode", { length: 80 }),
+  resourceType: varchar("resourceType", { length: 80 }).notNull(),
+  resourceName: varchar("resourceName", { length: 200 }).notNull(),
+  requiredQty: int("requiredQty").default(0).notNull(),
+  availableQty: int("availableQty").default(0).notNull(),
+  unit: varchar("unit", { length: 40 }).default("each").notNull(),
+  shiftName: varchar("shiftName", { length: 120 }),
+  needDate: date("needDate"),
+  status: varchar("status", { length: 80 }).default("Planned").notNull(),
+  notes: text("notes"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** SLA targets used to calculate management overdue and escalation views. */
+export const slaRuleSettings = mysqlTable("sla_rule_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  phase: blindPhaseEnum.notNull(),
+  priority: varchar("priority", { length: 40 }).default("All").notNull(),
+  targetHours: int("targetHours").default(24).notNull(),
+  escalationRole: varchar("escalationRole", { length: 120 }),
+  escalationAfterHours: int("escalationAfterHours").default(4).notNull(),
+  isActive: int("isActive").default(1).notNull(),
+  updatedByOpenId: varchar("updatedByOpenId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  slaPhasePriorityUnique: uniqueIndex("sla_rule_phase_priority_unique").on(table.phase, table.priority),
+}));
+
+export type ManagementDailyReportRow = typeof managementDailyReports.$inferSelect;
+export type InsertManagementDailyReport = typeof managementDailyReports.$inferInsert;
+export type ResourcePlanEntryRow = typeof resourcePlanEntries.$inferSelect;
+export type InsertResourcePlanEntry = typeof resourcePlanEntries.$inferInsert;
+export type SlaRuleSettingRow = typeof slaRuleSettings.$inferSelect;
+export type InsertSlaRuleSetting = typeof slaRuleSettings.$inferInsert;
 

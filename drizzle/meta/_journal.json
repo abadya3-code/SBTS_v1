@@ -113,6 +113,13 @@
       "when": 1783155000000,
       "tag": "0015_field_mobile_offline_handover",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1783165000000,
+      "tag": "0016_management_reporting_sla_resource_plan",
+      "breakpoints": true
     }
   ]
 }

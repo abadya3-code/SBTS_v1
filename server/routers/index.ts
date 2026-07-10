@@ -27,6 +27,7 @@ import { profileRouter } from "./profile";
 import { slipBlindsRouter } from "./slipBlinds";
 import { auditRouter } from "./audit";
 import { fieldComplianceRouter } from "./fieldCompliance";
+import { managementRouter } from "./management";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts
@@ -47,6 +48,7 @@ export const appRouter = router({
   slipBlinds: slipBlindsRouter,
   audit: auditRouter,
   fieldCompliance: fieldComplianceRouter,
+  management: managementRouter,
 });
 
 export type AppRouter = typeof appRouter;

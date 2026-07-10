@@ -1,0 +1,62 @@
+{
+  "version": "2.3.0",
+  "missingLocalImports": [],
+  "missingLocalImportsCount": 0,
+  "arabicExecutableLines": [],
+  "arabicExecutableLineCount": 0,
+  "routeCount": 27,
+  "newRoute": "/management",
+  "newRouter": "management",
+  "newMigration": "drizzle/0016_management_reporting_sla_resource_plan.sql",
+  "newTables": [
+    "management_daily_reports",
+    "resource_plan_entries",
+    "sla_rule_settings"
+  ],
+  "newPermissions": [
+    "management.view",
+    "management.manage"
+  ],
+  "largestPages": [
+    [
+      "SystemSettings.tsx",
+      2676
+    ],
+    [
+      "ProjectDetail.tsx",
+      1873
+    ],
+    [
+      "Reports.tsx",
+      1058
+    ],
+    [
+      "UserManagement.tsx",
+      953
+    ],
+    [
+      "Blinds.tsx",
+      919
+    ],
+    [
+      "UserProfile.tsx",
+      726
+    ],
+    [
+      "WorkflowStudio.tsx",
+      583
+    ],
+    [
+      "Register.tsx",
+      560
+    ],
+    [
+      "Dashboard.tsx",
+      381
+    ],
+    [
+      "Login.tsx",
+      336
+    ]
+  ]
+}

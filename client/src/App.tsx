@@ -30,6 +30,7 @@ import ComplianceCenter from "./pages/ComplianceCenter";
 import FieldExecutionCenter from "./pages/FieldExecutionCenter";
 import FieldVerification from "./pages/FieldVerification";
 import MobileOfflineCenter from "./pages/MobileOfflineCenter";
+import ManagementCenter from "./pages/ManagementCenter";
 import { Route, Switch } from "wouter";
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -65,6 +66,7 @@ function Router() {
         <Route path="/compliance" component={ComplianceCenter} />
         <Route path="/field" component={FieldExecutionCenter} />
         <Route path="/mobile" component={MobileOfflineCenter} />
+        <Route path="/management" component={ManagementCenter} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>
