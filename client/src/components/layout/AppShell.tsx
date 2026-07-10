@@ -103,10 +103,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const pendingCount = pendingQuery.data?.length ?? 0;
 
-  const showComingSoon = (label: string) => {
-    toast.info(`${label} — coming soon`);
-  };
-
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
@@ -240,27 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
-            </nav>
-
-            <div className="mt-7 mb-3 px-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Next Modules
-            </div>
-            <div className="space-y-1.5">
-              {visibleSecondaryNavItems.map(item => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.key}
-                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-400 transition hover:bg-white/8 hover:text-white"
-                    onClick={() => showComingSoon(item.label)}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            </nav>          </div>
 
           <div className="border-t border-white/10 p-4">
             <div className="rounded-2xl bg-white/8 p-3 ring-1 ring-white/10">

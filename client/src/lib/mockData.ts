@@ -44,11 +44,10 @@ export const navItems: { key: string; label: string; path: string; icon: LucideI
   { key: "settings", label: "System Settings", path: "/settings", icon: SlidersHorizontal, description: "General, tag defaults & certificates" },
   { key: "notifications", label: "Notifications", path: "/notifications", icon: Bell, description: "In-app alerts and updates" },
   { key: "reports", label: "Reports", path: "/reports", icon: BarChart3, description: "Operational reports and exports" },
+  { key: "audit", label: "Audit Center", path: "/audit", icon: Activity, description: "Compliance and traceability controls" },
 ];
 
-export const secondaryNavItems: { key: string; label: string; icon: LucideIcon }[] = [
-  { key: "audit", label: "Audit Logs", icon: Activity },
-];
+export const secondaryNavItems: { key: string; label: string; icon: LucideIcon }[] = [];
 
 export const phases: { key: PhaseKey; label: string; color: string; count: number; owner: string }[] = [
   { key: "broken", label: "Broken / Preparation", color: "#ef4444", count: 16, owner: "Coordinator" },

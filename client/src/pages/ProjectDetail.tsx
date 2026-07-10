@@ -1138,7 +1138,7 @@ export default function ProjectDetail() {
             progress={progress}
             description={project.description ?? undefined}
             onEdit={openSettings}
-            onShare={() => toast.info("Share feature coming soon")}
+            onShare={() => navigator.clipboard?.writeText(window.location.href).then(() => toast.success("Project link copied."), () => toast.info("Copy this page URL from the address bar."))}
           />
 
           {/* Metrics Cards Component */}
@@ -1166,8 +1166,7 @@ export default function ProjectDetail() {
               owners: phaseOwnerByPhase.get(phase)?.owners ?? [],
             }))}
             onPhaseClick={phase => {
-              // Phase detail view to be implemented in Phase 4
-              toast.info(`Viewing phase: ${phase}`);
+              toast.info(`Filtered view for ${phase} will use the registry filters in the next workflow sprint.`);
             }}
           />
 
@@ -1210,8 +1209,7 @@ export default function ProjectDetail() {
               if (blind) openEditBlind(blind as BlindDraft);
             }}
             onDelete={blindId => {
-              // Delete feature to be implemented in Phase 4
-              toast.info(`Delete feature for ${blindId} coming soon`);
+              toast.warning(`Delete is intentionally disabled for ${blindId} to preserve audit traceability.`);
             }}
           />
 
@@ -1284,7 +1282,7 @@ export default function ProjectDetail() {
                     Workflow settings
                   </h2>
                   <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
-                    Control project workers, phase colors, and the mandatory
+                    Control project workers, phase colors, assignees, and the mandatory
                     Slip Blind gate from one settings area.
                   </p>
                 </div>
@@ -1389,7 +1387,8 @@ export default function ProjectDetail() {
       </Dialog>
 
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[92vh] w-[min(96vw,1180px)] max-w-none overflow-hidden p-0">
+          <div className="max-h-[92vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Bulk add blinds from Excel</DialogTitle>
             <DialogDescription>
@@ -1561,11 +1560,13 @@ export default function ProjectDetail() {
                 : `Import ${bulkPreview.parsed.length} rows`}
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-h-[92vh] w-[min(96vw,1200px)] max-w-none overflow-hidden p-0">
+          <div className="max-h-[92vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Project workflow settings</DialogTitle>
             <DialogDescription>
@@ -1594,7 +1595,21 @@ export default function ProjectDetail() {
               </span>
             </label>
           </div>
-          <div className="space-y-3">
+          <div className="mb-5 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Phases configured</div>
+              <div className="mt-2 text-2xl font-extrabold text-slate-950">{settingsDraft.length}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Assigned users</div>
+              <div className="mt-2 text-2xl font-extrabold text-slate-950">{settingsDraft.reduce((sum, item) => sum + item.owners.length, 0)}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Slip blind gate</div>
+              <div className="mt-2 text-base font-extrabold text-slate-950">{slipBlindGateRequiredDraft ? "Required" : "Optional"}</div>
+            </div>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
             {settingsDraft.map(owner => {
               const availableForPhase = assignableUsers.filter(
                 candidate =>
@@ -1605,11 +1620,11 @@ export default function ProjectDetail() {
               return (
                 <div
                   key={owner.phase}
-                  className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"
+                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
                         Workflow phase
                       </div>
                       <div className="mt-2 font-extrabold text-slate-950">
@@ -1619,7 +1634,7 @@ export default function ProjectDetail() {
                         Only selected workers can update this phase. Specialty
                         configuration belongs here, not inside the work screen.
                       </p>
-                      <label className="mt-3 flex items-center gap-2 text-xs font-extrabold text-slate-600">
+                      <label className="mt-4 inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-extrabold text-slate-600 ring-1 ring-slate-200">
                         Phase color
                         <input
                           type="color"
@@ -1727,7 +1742,7 @@ export default function ProjectDetail() {
               );
             })}
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               type="button"
               variant="outline"
@@ -1743,6 +1758,7 @@ export default function ProjectDetail() {
               Save settings
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

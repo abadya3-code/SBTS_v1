@@ -1,0 +1,220 @@
+{
+  "routes": [
+    {
+      "path": "/login",
+      "component": "Login",
+      "access": "Public / special"
+    },
+    {
+      "path": "/register",
+      "component": "Register",
+      "access": "Public / special"
+    },
+    {
+      "path": "/approve",
+      "component": "Approve",
+      "access": "Public / special"
+    },
+    {
+      "path": "/certificate/:projectId/:tag",
+      "component": "BlindCertificate",
+      "access": "Public / special"
+    },
+    {
+      "path": "/",
+      "component": "Dashboard",
+      "access": "Protected"
+    },
+    {
+      "path": "/dashboard",
+      "component": "Dashboard",
+      "access": "Protected"
+    },
+    {
+      "path": "/areas",
+      "component": "Areas",
+      "access": "Protected"
+    },
+    {
+      "path": "/areas/:areaId/projects/:projectId/blinds/:tag",
+      "component": "BlindDetail",
+      "access": "Protected"
+    },
+    {
+      "path": "/areas/:areaId/projects/:projectId",
+      "component": "ProjectDetail",
+      "access": "Protected"
+    },
+    {
+      "path": "/areas/:areaId/projects",
+      "component": "Projects",
+      "access": "Protected"
+    },
+    {
+      "path": "/projects/:projectId/blinds/:tag",
+      "component": "BlindDetail",
+      "access": "Protected"
+    },
+    {
+      "path": "/projects/:projectId",
+      "component": "ProjectDetail",
+      "access": "Protected"
+    },
+    {
+      "path": "/projects",
+      "component": "Projects",
+      "access": "Protected"
+    },
+    {
+      "path": "/blinds",
+      "component": "Blinds",
+      "access": "Protected"
+    },
+    {
+      "path": "/workflow-studio",
+      "component": "WorkflowStudio",
+      "access": "Protected"
+    },
+    {
+      "path": "/access-control",
+      "component": "AccessControl",
+      "access": "Protected"
+    },
+    {
+      "path": "/users",
+      "component": "UserManagement",
+      "access": "Protected"
+    },
+    {
+      "path": "/settings",
+      "component": "SystemSettings",
+      "access": "Protected"
+    },
+    {
+      "path": "/notifications",
+      "component": "Notifications",
+      "access": "Protected"
+    },
+    {
+      "path": "/reports",
+      "component": "Reports",
+      "access": "Protected"
+    },
+    {
+      "path": "/audit",
+      "component": "AuditCenter",
+      "access": "Protected"
+    },
+    {
+      "path": "/profile",
+      "component": "UserProfile",
+      "access": "Protected"
+    }
+  ],
+  "nav": [
+    {
+      "key": "dashboard",
+      "label": "Dashboard",
+      "path": "/dashboard",
+      "status": "routed"
+    },
+    {
+      "key": "areas",
+      "label": "Areas",
+      "path": "/areas",
+      "status": "routed"
+    },
+    {
+      "key": "projects",
+      "label": "Projects",
+      "path": "/projects",
+      "status": "routed"
+    },
+    {
+      "key": "blinds",
+      "label": "Blinds",
+      "path": "/blinds",
+      "status": "routed"
+    },
+    {
+      "key": "workflow-studio",
+      "label": "Workflow Studio",
+      "path": "/workflow-studio",
+      "status": "routed"
+    },
+    {
+      "key": "access-control",
+      "label": "Access Control",
+      "path": "/access-control",
+      "status": "routed"
+    },
+    {
+      "key": "users",
+      "label": "User Management",
+      "path": "/users",
+      "status": "routed"
+    },
+    {
+      "key": "settings",
+      "label": "System Settings",
+      "path": "/settings",
+      "status": "routed"
+    },
+    {
+      "key": "notifications",
+      "label": "Notifications",
+      "path": "/notifications",
+      "status": "routed"
+    },
+    {
+      "key": "reports",
+      "label": "Reports",
+      "path": "/reports",
+      "status": "routed"
+    },
+    {
+      "key": "audit",
+      "label": "Audit Center",
+      "path": "/audit",
+      "status": "routed"
+    }
+  ],
+  "staticChecks": {
+    "arabicExecutableClientLines": 0,
+    "missingLocalImports": [],
+    "largePages": [
+      [
+        "SystemSettings.tsx",
+        2676
+      ],
+      [
+        "ProjectDetail.tsx",
+        1766
+      ],
+      [
+        "Reports.tsx",
+        1058
+      ],
+      [
+        "UserManagement.tsx",
+        953
+      ],
+      [
+        "Blinds.tsx",
+        919
+      ],
+      [
+        "UserProfile.tsx",
+        726
+      ],
+      [
+        "WorkflowStudio.tsx",
+        583
+      ],
+      [
+        "Register.tsx",
+        560
+      ]
+    ]
+  }
+}

@@ -2216,49 +2216,72 @@ function SecuritySettingsTab() {
       </Card>
 
       {/* Audit Trail */}
-      <Card className="sbts-card">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-extrabold text-slate-950">
-            Audit Trail
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+      <Card className="sbts-card overflow-hidden">
+        <CardHeader className="border-b border-slate-100 bg-[linear-gradient(135deg,#0f172a,#1e293b)] pb-5 text-white">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="text-sm font-bold text-slate-900">
-                Enable Audit Trail
+              <CardTitle className="text-lg font-extrabold text-white">
+                Audit & Compliance Center
+              </CardTitle>
+              <CardDescription className="mt-2 max-w-2xl text-slate-300">
+                Centralize traceability controls, retention, and action logging in a cleaner operational view similar to Reports Center.
+              </CardDescription>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300">Audit trail</div>
+                <div className="mt-2 text-xl font-extrabold">{form.auditTrailEnabled ? "Enabled" : "Disabled"}</div>
               </div>
-              <div className="text-xs text-slate-500">
-                Log all user actions for compliance
+              <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300">Retention</div>
+                <div className="mt-2 text-xl font-extrabold">{form.auditRetentionDays} days</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10 sm:col-span-1 col-span-2">
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300">Delete control</div>
+                <div className="mt-2 text-sm font-extrabold">{form.requireDeleteConfirmation ? "Confirmation required" : "Direct delete allowed"}</div>
               </div>
             </div>
-            <Switch
-              checked={form.auditTrailEnabled}
-              onCheckedChange={v =>
-                setForm(f => f && { ...f, auditTrailEnabled: v })
-              }
-            />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Retention (days)
-            </Label>
-            <Input
-              type="number"
-              min={7}
-              max={365}
-              value={form.auditRetentionDays}
-              onChange={e =>
-                setForm(
-                  f =>
-                    f && {
-                      ...f,
-                      auditRetentionDays: parseInt(e.target.value) || 90,
-                    }
-                )
-              }
-              className="sbts-input w-32"
-            />
+        </CardHeader>
+        <CardContent className="space-y-5 p-6">
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-extrabold text-slate-950">Enable audit trail</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Capture critical user actions and maintain a traceable compliance history.</div>
+                </div>
+                <Switch
+                  checked={form.auditTrailEnabled}
+                  onCheckedChange={v => setForm(f => f && { ...f, auditTrailEnabled: v })}
+                />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <Label className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Retention period
+              </Label>
+              <div className="mt-3 flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={7}
+                  max={365}
+                  value={form.auditRetentionDays}
+                  onChange={e =>
+                    setForm(
+                      f =>
+                        f && {
+                          ...f,
+                          auditRetentionDays: parseInt(e.target.value) || 90,
+                        }
+                    )
+                  }
+                  className="sbts-input w-36"
+                />
+                <span className="text-sm font-semibold text-slate-500">days</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">Recommended for regulated operations: 90–180 days.</p>
+            </div>
           </div>
         </CardContent>
       </Card>

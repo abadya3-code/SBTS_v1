@@ -20,7 +20,6 @@ import {
   getNotificationPreferences,
   upsertNotificationPreferences,
 } from "../db";
-import { storagePut } from "../storage";
 
 export const settingsRouter = router({
   general: router({
@@ -92,12 +91,10 @@ export const settingsRouter = router({
       if (buffer.byteLength > 2 * 1024 * 1024) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "File must be under 2MB" });
       }
-      const ext = input.mimeType === "image/svg+xml" ? "svg" : input.mimeType.split("/")[1];
-      const key = `settings/${input.target}_${Date.now()}.${ext}`;
-      const { url } = await storagePut(key, buffer, input.mimeType);
+      const url = `data:${input.mimeType};base64,${input.base64}`;
       const fieldMap = { appImage: "appImageUrl", companyLogo: "companyLogoUrl", heroImage: "dashboardHeroImageUrl" };
       await upsertSystemSettings({ [fieldMap[input.target]]: url }, ctx.user.openId);
-      return { url };
+      return { url, storage: "inline" };
     }),
   }),
 
@@ -171,11 +168,9 @@ export const settingsRouter = router({
       if (buffer.byteLength > 2 * 1024 * 1024) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Logo file must be under 2MB" });
       }
-      const ext = input.mimeType === "image/svg+xml" ? "svg" : input.mimeType.split("/")[1];
-      const key = `logos/certificate-logo_${Date.now()}.${ext}`;
-      const { url } = await storagePut(key, buffer, input.mimeType);
+      const url = `data:${input.mimeType};base64,${input.base64}`;
       await upsertCertificateSettings({ logoUrl: url }, ctx.user.openId);
-      return { url };
+      return { url, storage: "inline" };
     }),
 
     removeLogo: adminProcedure.mutation(async ({ ctx }) => {

@@ -25,6 +25,7 @@ import Approve from "./pages/Approve";
 import BlindCertificate from "./pages/BlindCertificate";
 import Reports from "./pages/Reports";
 import UserProfile from "./pages/UserProfile";
+import AuditCenter from "./pages/AuditCenter";
 import { Route, Switch } from "wouter";
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -55,6 +56,7 @@ function Router() {
         <Route path="/settings" component={SystemSettings} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/reports" component={Reports} />
+        <Route path="/audit" component={AuditCenter} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>

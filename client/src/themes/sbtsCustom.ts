@@ -1,11 +1,6 @@
 /**
- * SBTS Custom Theme
- * مخصص وحديث، مستوحى من Aramco
- * 
- * الخصائص:
- * - ألوان حديثة وجذابة
- * - تصميم معاصر وديناميكي
- * - مناسب للتطبيقات الحديثة
+ * SBTS Industrial Theme
+ * English-only theme definition for production UI consistency.
  */
 
 export const sbtsCustomTheme = {
@@ -15,42 +10,42 @@ export const sbtsCustomTheme = {
   
   colors: {
     // Primary Colors
-    primary: '#0891B2',      // سماوي (اللون الحالي)
-    primaryLight: '#06B6D4', // سماوي فاتح
-    primaryDark: '#0E7490',  // سماوي أغمق
+    primary: '#0891B2',
+    primaryLight: '#06B6D4',
+    primaryDark: '#0E7490',
     
     // Secondary Colors
-    secondary: '#06B6D4',    // سماوي فاتح
+    secondary: '#06B6D4',
     secondaryLight: '#22D3EE',
     secondaryDark: '#0891B2',
     
     // Accent Colors
-    accent: '#EC4899',       // وردي
+    accent: '#EC4899',
     accentLight: '#F472B6',
     accentDark: '#DB2777',
     
     // Neutral Colors
-    background: '#F8FAFC',   // أبيض مع لمسة زرقاء
-    surface: '#FFFFFF',      // أبيض
-    border: '#E2E8F0',       // رمادي فاتح
-    text: '#1E293B',         // رمادي داكن
-    textLight: '#475569',    // رمادي متوسط
-    textLighter: '#94A3B8',  // رمادي فاتح
+    background: '#F8FAFC',
+    surface: '#FFFFFF',
+    border: '#E2E8F0',
+    text: '#1E293B',
+    textLight: '#475569',
+    textLighter: '#94A3B8',
     
     // Semantic Colors
-    success: '#10B981',      // أخضر حديث
+    success: '#10B981',
     successLight: '#6EE7B7',
     successDark: '#059669',
     
-    warning: '#F59E0B',      // برتقالي حديث
+    warning: '#F59E0B',
     warningLight: '#FBBF24',
     warningDark: '#D97706',
     
-    error: '#EF4444',        // أحمر حديث
+    error: '#EF4444',
     errorLight: '#F87171',
     errorDark: '#DC2626',
     
-    info: '#3B82F6',         // أزرق حديث
+    info: '#3B82F6',
     infoLight: '#60A5FA',
     infoDark: '#1D4ED8',
   },

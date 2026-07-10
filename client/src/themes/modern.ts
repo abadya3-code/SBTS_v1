@@ -1,12 +1,6 @@
 /**
- * Modern Theme
- * معاصر ومتطور مع Dark Mode
- * 
- * الخصائص:
- * - ألوان جريئة وحديثة
- * - تصميم متطور وديناميكي
- * - Dark Mode كافتراضي
- * - مناسب للتطبيقات المتقدمة
+ * Modern Executive Theme
+ * English-only theme definition for production UI consistency.
  */
 
 export const modernTheme = {
@@ -17,42 +11,42 @@ export const modernTheme = {
   
   colors: {
     // Primary Colors
-    primary: '#7C3AED',      // بنفسجي
-    primaryLight: '#A78BFA', // بنفسجي فاتح
-    primaryDark: '#6D28D9',  // بنفسجي أغمق
+    primary: '#7C3AED',
+    primaryLight: '#A78BFA',
+    primaryDark: '#6D28D9',
     
     // Secondary Colors
-    secondary: '#A78BFA',    // بنفسجي فاتح
+    secondary: '#A78BFA',
     secondaryLight: '#C4B5FD',
     secondaryDark: '#7C3AED',
     
     // Accent Colors
-    accent: '#06B6D4',       // سماوي
+    accent: '#06B6D4',
     accentLight: '#22D3EE',
     accentDark: '#0891B2',
     
     // Neutral Colors (Dark Mode)
-    background: '#0F172A',   // أسود مع لمسة زرقاء
-    surface: '#1E293B',      // رمادي داكن
-    border: '#334155',       // رمادي متوسط
-    text: '#F1F5F9',         // أبيض فاتح
-    textLight: '#CBD5E1',    // رمادي فاتح
-    textLighter: '#94A3B8',  // رمادي متوسط
+    background: '#0F172A',
+    surface: '#1E293B',
+    border: '#334155',
+    text: '#F1F5F9',
+    textLight: '#CBD5E1',
+    textLighter: '#94A3B8',
     
     // Semantic Colors
-    success: '#34D399',      // أخضر نيون
+    success: '#34D399',
     successLight: '#6EE7B7',
     successDark: '#10B981',
     
-    warning: '#FBBF24',      // ذهبي
+    warning: '#FBBF24',
     warningLight: '#FCD34D',
     warningDark: '#F59E0B',
     
-    error: '#F87171',        // أحمر فاتح
+    error: '#F87171',
     errorLight: '#FCA5A5',
     errorDark: '#EF4444',
     
-    info: '#60A5FA',         // أزرق فاتح
+    info: '#60A5FA',
     infoLight: '#93C5FD',
     infoDark: '#3B82F6',
   },

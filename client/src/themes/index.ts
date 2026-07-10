@@ -1,6 +1,6 @@
 /**
  * Themes Index
- * تصدير جميع الثيمات المتاحة
+ * Central export point for available application themes.
  */
 
 export { sapCleanTheme, type SapCleanTheme } from './sapClean';
@@ -11,35 +11,29 @@ import { sapCleanTheme } from './sapClean';
 import { sbtsCustomTheme } from './sbtsCustom';
 import { modernTheme } from './modern';
 
-/**
- * قاموس الثيمات - للوصول السريع إلى أي ثيم
- */
 export const themesMap = {
   'sap-clean': sapCleanTheme,
   'sbts-custom': sbtsCustomTheme,
   'modern': modernTheme,
 } as const;
 
-/**
- * قائمة الثيمات المتاحة
- */
 export const availableThemes = [
   {
     id: 'sap-clean',
     name: 'SAP Clean',
-    description: 'Professional and classic theme inspired by SAP',
+    description: 'Professional and classic enterprise theme',
     theme: sapCleanTheme,
   },
   {
     id: 'sbts-custom',
-    name: 'SBTS Custom',
-    description: 'Modern and custom theme inspired by Aramco',
+    name: 'SBTS Industrial',
+    description: 'Industrial command-center theme for maintenance operations',
     theme: sbtsCustomTheme,
   },
   {
     id: 'modern',
-    name: 'Modern',
-    description: 'Contemporary and advanced theme with Dark Mode',
+    name: 'Modern Executive',
+    description: 'Contemporary dark-ready executive theme',
     theme: modernTheme,
   },
 ] as const;
