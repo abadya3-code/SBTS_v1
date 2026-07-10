@@ -120,6 +120,13 @@
       "when": 1783165000000,
       "tag": "0016_management_reporting_sla_resource_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1783175000000,
+      "tag": "0017_blind_detail_hub_full_integration",
+      "breakpoints": true
     }
   ]
 }

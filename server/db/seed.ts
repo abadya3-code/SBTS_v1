@@ -88,6 +88,8 @@ export const seedPermissionGroups: PermissionGroupModel[] = [
       { key: "blinds.edit", label: "Edit blind", description: "Modify blind details and metadata", group: "Blind Registry" },
       { key: "blinds.phase.change", label: "Change phase", description: "Move a blind through workflow", group: "Blind Registry" },
       { key: "blinds.delete", label: "Delete blind", description: "Archive or delete blind records", group: "Blind Registry" },
+      { key: "blindHub.view", label: "View Blind Hub", description: "Open the unified blind detail hub", group: "Blind Registry" },
+      { key: "blindHub.manage", label: "Manage Blind Hub", description: "Use hub actions across workflow, compliance, field and certificate panels", group: "Blind Registry" },
     ],
   },
   {
@@ -114,6 +116,7 @@ export const seedPermissionGroups: PermissionGroupModel[] = [
       { key: "compliance.view", label: "View compliance", description: "Read safety, evidence, torque, expiry, and inspection records", group: "Industrial Compliance" },
       { key: "compliance.manage", label: "Manage compliance", description: "Create checklists, evidence, torque, and inspection records", group: "Industrial Compliance" },
       { key: "field.mobile", label: "Use offline mobile", description: "Use offline drafts, mobile queue, and shift handover features", group: "Industrial Compliance" },
+      { key: "field.manage", label: "Manage field actions", description: "Create PTW, LOTO, risk, notes and field execution records", group: "Industrial Compliance" },
       { key: "handover.manage", label: "Manage shift handover", description: "Create and review field shift handover records", group: "Industrial Compliance" },
     ],
   },
@@ -125,11 +128,20 @@ export const seedPermissionGroups: PermissionGroupModel[] = [
     ],
   },
   {
+    group: "System Settings",
+    permissions: [
+      { key: "settings.view", label: "View settings", description: "Read configuration center", group: "System Settings" },
+      { key: "settings.blindHub.manage", label: "Manage Blind Hub settings", description: "Control hub tabs, readiness rules, public QR and certificate behavior", group: "System Settings" },
+    ],
+  },
+  {
     group: "Reports & Certificates",
     permissions: [
       { key: "reports.view", label: "View reports", description: "Open dashboard and report cards", group: "Reports & Certificates" },
       { key: "reports.export", label: "Export reports", description: "Download CSV/PDF summaries", group: "Reports & Certificates" },
       { key: "certificates.manage", label: "Manage certificates", description: "Configure certificate templates", group: "Reports & Certificates" },
+      { key: "certificate.generate", label: "Generate certificate", description: "Generate or regenerate blind hub certificates", group: "Reports & Certificates" },
+      { key: "certificate.revoke", label: "Revoke certificate", description: "Revoke issued certificate packages", group: "Reports & Certificates" },
       { key: "qr.manage", label: "Manage QR tags", description: "Generate or reissue QR links", group: "Reports & Certificates" },
     ],
   },
@@ -140,13 +152,13 @@ const allSeedPhaseKeys: PhaseKey[] = ["broken", "assembly", "tightTorque", "fina
 
 export const seedRoles: RoleModel[] = [
   { key: "admin", name: "Administrator", subtitle: "Full platform owner and emergency override", members: 2, color: "#38bdf8", permissionKeys: allSeedPermissionKeys, menuKeys: ["dashboard", "projects", "blinds", "compliance", "field", "mobile", "access-control", "reports", "audit", "management", "settings"], phaseKeys: allSeedPhaseKeys },
-  { key: "coordinator", name: "Coordinator", subtitle: "Project setup, area control, assignment follow-up", members: 4, color: "#60a5fa", permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "workflow.view", "reports.view", "users.view", "management.view", "management.manage", "compliance.view", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "projects", "blinds", "compliance", "field", "mobile", "reports", "management"], phaseKeys: ["broken"] },
-  { key: "technician", name: "Technician", subtitle: "Field execution and blind status updates", members: 18, color: "#f59e0b", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "qr.manage", "compliance.view", "compliance.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "management"], phaseKeys: ["assembly"] },
-  { key: "qc", name: "QC Inspector", subtitle: "Quality verification and final tightening approval", members: 7, color: "#22c55e", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "audit.view", "management.view", "management.manage", "compliance.view", "compliance.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["finalTight", "inspectionReady"] },
-  { key: "safety", name: "Safety Officer", subtitle: "Safety oversight, restrictions, and compliance review", members: 5, color: "#ef4444", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "reports.view", "audit.view", "management.view", "management.manage", "compliance.view", "compliance.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["broken", "inspectionReady"] },
-  { key: "tiEngineer", name: "T&I Engineer", subtitle: "Torque gate owner and technical validation", members: 6, color: "#eab308", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "management.view", "management.manage", "compliance.view", "compliance.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management"], phaseKeys: ["tightTorque"] },
-  { key: "inspection", name: "Inspection Team", subtitle: "Final inspection readiness and certificate package review", members: 9, color: "#3b82f6", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view", "management.view", "management.manage", "compliance.view", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["inspectionReady"] },
-  { key: "metalForeman", name: "Metal Foreman", subtitle: "Mechanical supervision and craft-level coordination", members: 3, color: "#94a3b8", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "management.view", "compliance.view", "compliance.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "management"], phaseKeys: ["assembly", "tightTorque"] },
+  { key: "coordinator", name: "Coordinator", subtitle: "Project setup, area control, assignment follow-up", members: 4, color: "#60a5fa", permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "blindHub.view", "blindHub.manage", "workflow.view", "reports.view", "users.view", "management.view", "management.manage", "settings.blindHub.manage", "compliance.view", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "projects", "blinds", "compliance", "field", "mobile", "reports", "management"], phaseKeys: ["broken"] },
+  { key: "technician", name: "Technician", subtitle: "Field execution and blind status updates", members: 18, color: "#f59e0b", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "blindHub.view", "workflow.view", "workflow.approve", "qr.manage", "compliance.view", "compliance.manage", "field.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "management"], phaseKeys: ["assembly"] },
+  { key: "qc", name: "QC Inspector", subtitle: "Quality verification and final tightening approval", members: 7, color: "#22c55e", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "blindHub.view", "workflow.view", "workflow.approve", "blindHub.view", "reports.view", "audit.view", "management.view", "management.manage", "settings.blindHub.manage", "compliance.view", "compliance.manage", "field.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["finalTight", "inspectionReady"] },
+  { key: "safety", name: "Safety Officer", subtitle: "Safety oversight, restrictions, and compliance review", members: 5, color: "#ef4444", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "blindHub.view", "reports.view", "audit.view", "management.view", "management.manage", "settings.blindHub.manage", "compliance.view", "compliance.manage", "field.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["broken", "inspectionReady"] },
+  { key: "tiEngineer", name: "T&I Engineer", subtitle: "Torque gate owner and technical validation", members: 6, color: "#eab308", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "blindHub.view", "workflow.view", "workflow.approve", "blindHub.view", "reports.view", "management.view", "management.manage", "settings.blindHub.manage", "compliance.view", "compliance.manage", "field.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management"], phaseKeys: ["tightTorque"] },
+  { key: "inspection", name: "Inspection Team", subtitle: "Final inspection readiness and certificate package review", members: 9, color: "#3b82f6", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view", "management.view", "management.manage", "settings.blindHub.manage", "compliance.view", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "reports", "management", "audit"], phaseKeys: ["inspectionReady"] },
+  { key: "metalForeman", name: "Metal Foreman", subtitle: "Mechanical supervision and craft-level coordination", members: 3, color: "#94a3b8", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "blindHub.view", "workflow.view", "workflow.approve", "management.view", "compliance.view", "compliance.manage", "field.manage", "field.mobile", "handover.manage"], menuKeys: ["dashboard", "blinds", "compliance", "field", "mobile", "management"], phaseKeys: ["assembly", "tightTorque"] },
 ];
 
 const seedWorkflowTemplates: WorkflowTemplateInput[] = [

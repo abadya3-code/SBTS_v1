@@ -13,9 +13,11 @@ import Areas from "./pages/Areas";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import BlindDetail from "./pages/BlindDetail";
+import BlindDetailHub from "./pages/BlindDetailHub";
 import Blinds from "./pages/Blinds";
 import WorkflowStudio from "./pages/WorkflowStudio";
 import SystemSettings from "./pages/SystemSettings";
+import BlindHubSettings from "./pages/BlindHubSettings";
 import UserManagement from "./pages/UserManagement";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -49,9 +51,11 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/areas" component={Areas} />
+        <Route path="/areas/:areaId/projects/:projectId/blinds/:tag/hub" component={BlindDetailHub} />
         <Route path="/areas/:areaId/projects/:projectId/blinds/:tag" component={BlindDetail} />
         <Route path="/areas/:areaId/projects/:projectId" component={ProjectDetail} />
         <Route path="/areas/:areaId/projects" component={Projects} />
+        <Route path="/projects/:projectId/blinds/:tag/hub" component={BlindDetailHub} />
         <Route path="/projects/:projectId/blinds/:tag" component={BlindDetail} />
         <Route path="/projects/:projectId" component={ProjectDetail} />
         <Route path="/projects" component={Projects} />
@@ -59,6 +63,7 @@ function Router() {
         <Route path="/workflow-studio" component={WorkflowStudio} />
         <Route path="/access-control" component={AccessControl} />
         <Route path="/users" component={UserManagement} />
+        <Route path="/settings/blind-hub" component={BlindHubSettings} />
         <Route path="/settings" component={SystemSettings} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/reports" component={Reports} />

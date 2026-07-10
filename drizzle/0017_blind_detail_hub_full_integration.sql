@@ -1,0 +1,103 @@
+CREATE TABLE IF NOT EXISTS `blind_hub_settings` (
+  `id` int AUTO_INCREMENT PRIMARY KEY,
+  `scopeType` enum('system','project') NOT NULL DEFAULT 'system',
+  `projectId` varchar(40),
+  `showOverviewTab` int NOT NULL DEFAULT 1,
+  `showWorkflowTab` int NOT NULL DEFAULT 1,
+  `showComplianceTab` int NOT NULL DEFAULT 1,
+  `showFieldActionsTab` int NOT NULL DEFAULT 1,
+  `showQrMobileTab` int NOT NULL DEFAULT 1,
+  `showCertificateHistoryTab` int NOT NULL DEFAULT 1,
+  `enablePtw` int NOT NULL DEFAULT 1,
+  `enableLoto` int NOT NULL DEFAULT 1,
+  `enableRiskAssessment` int NOT NULL DEFAULT 1,
+  `enableGasTest` int NOT NULL DEFAULT 1,
+  `enableTorqueRecords` int NOT NULL DEFAULT 1,
+  `enableNdeRecords` int NOT NULL DEFAULT 1,
+  `enableMtrRecords` int NOT NULL DEFAULT 1,
+  `enableLeakTest` int NOT NULL DEFAULT 1,
+  `enablePhotoEvidence` int NOT NULL DEFAULT 1,
+  `enableQrPublicView` int NOT NULL DEFAULT 1,
+  `enableOfflineMobile` int NOT NULL DEFAULT 1,
+  `enableShiftHandover` int NOT NULL DEFAULT 1,
+  `enableCertificateHash` int NOT NULL DEFAULT 1,
+  `enableEmailShare` int NOT NULL DEFAULT 0,
+  `requireChecklistBeforeAdvance` int NOT NULL DEFAULT 1,
+  `requireTorqueBeforeFinalTight` int NOT NULL DEFAULT 1,
+  `requireInspectionBeforeCertificate` int NOT NULL DEFAULT 1,
+  `requireEvidenceBeforeCertificate` int NOT NULL DEFAULT 1,
+  `requirePtwBeforeFieldExecution` int NOT NULL DEFAULT 1,
+  `requireLotoBeforeFieldExecution` int NOT NULL DEFAULT 1,
+  `requireRiskBeforeFieldExecution` int NOT NULL DEFAULT 1,
+  `requireAllApprovalsBeforeCertificate` int NOT NULL DEFAULT 1,
+  `minEvidenceCount` int NOT NULL DEFAULT 1,
+  `certificateMode` varchar(40) NOT NULL DEFAULT 'manual',
+  `publicQrDataLevel` varchar(40) NOT NULL DEFAULT 'standard',
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updatedByOpenId` varchar(64),
+  UNIQUE KEY `blind_hub_settings_scope_unique` (`scopeType`, `projectId`)
+);
+
+CREATE TABLE IF NOT EXISTS `blind_certificates` (
+  `id` int AUTO_INCREMENT PRIMARY KEY,
+  `projectId` varchar(40) NOT NULL,
+  `blindTag` varchar(40) NOT NULL,
+  `certificateNumber` varchar(120) NOT NULL,
+  `status` varchar(40) NOT NULL DEFAULT 'draft',
+  `readinessJson` text,
+  `certificateJson` text,
+  `pdfUrl` text,
+  `hash` varchar(128),
+  `previousHash` varchar(128),
+  `issuedByOpenId` varchar(64),
+  `issuedByName` varchar(200),
+  `issuedAt` timestamp NULL,
+  `revokedByOpenId` varchar(64),
+  `revokedAt` timestamp NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `blind_certificate_unique` (`projectId`, `blindTag`, `certificateNumber`)
+);
+
+CREATE TABLE IF NOT EXISTS `blind_certificate_events` (
+  `id` int AUTO_INCREMENT PRIMARY KEY,
+  `certificateId` int,
+  `projectId` varchar(40) NOT NULL,
+  `blindTag` varchar(40) NOT NULL,
+  `eventType` varchar(80) NOT NULL,
+  `eventJson` text,
+  `actorOpenId` varchar(64),
+  `actorName` varchar(200),
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `blind_field_notes` (
+  `id` int AUTO_INCREMENT PRIMARY KEY,
+  `projectId` varchar(40) NOT NULL,
+  `blindTag` varchar(40) NOT NULL,
+  `phase` enum('Broken / Preparation','Assembly','Tight & Torque','Final Tight','Inspection Ready') NOT NULL,
+  `note` text NOT NULL,
+  `source` varchar(40) NOT NULL DEFAULT 'web',
+  `voiceText` text,
+  `submittedByOpenId` varchar(64),
+  `submittedByName` varchar(200),
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `blind_required_actions` (
+  `id` int AUTO_INCREMENT PRIMARY KEY,
+  `projectId` varchar(40) NOT NULL,
+  `blindTag` varchar(40) NOT NULL,
+  `phase` enum('Broken / Preparation','Assembly','Tight & Torque','Final Tight','Inspection Ready') NOT NULL,
+  `actionKey` varchar(120) NOT NULL,
+  `label` varchar(240) NOT NULL,
+  `required` int NOT NULL DEFAULT 1,
+  `completed` int NOT NULL DEFAULT 0,
+  `completedByOpenId` varchar(64),
+  `completedAt` timestamp NULL,
+  `source` varchar(80) NOT NULL DEFAULT 'system',
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `blind_required_action_unique` (`projectId`, `blindTag`, `phase`, `actionKey`)
+);

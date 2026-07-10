@@ -28,6 +28,7 @@ import { slipBlindsRouter } from "./slipBlinds";
 import { auditRouter } from "./audit";
 import { fieldComplianceRouter } from "./fieldCompliance";
 import { managementRouter } from "./management";
+import { blindHubRouter } from "./blindHub";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts
@@ -49,6 +50,7 @@ export const appRouter = router({
   audit: auditRouter,
   fieldCompliance: fieldComplianceRouter,
   management: managementRouter,
+  blindHub: blindHubRouter,
 });
 
 export type AppRouter = typeof appRouter;

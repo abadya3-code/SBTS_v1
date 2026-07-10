@@ -1307,8 +1307,8 @@ export default function ProjectDetail() {
             isLoading={detailQuery.isLoading}
             onView={blindId => {
               const detailHref = areaId
-                ? `/areas/${areaId}/projects/${project.id}/blinds/${encodeURIComponent(blindId)}`
-                : `/projects/${project.id}/blinds/${encodeURIComponent(blindId)}`;
+                ? `/areas/${areaId}/projects/${project.id}/blinds/${encodeURIComponent(blindId)}/hub`
+                : `/projects/${project.id}/blinds/${encodeURIComponent(blindId)}/hub`;
               window.location.href = detailHref;
             }}
             onEdit={blindId => {

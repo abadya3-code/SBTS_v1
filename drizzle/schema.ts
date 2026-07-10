@@ -888,3 +888,131 @@ export type InsertResourcePlanEntry = typeof resourcePlanEntries.$inferInsert;
 export type SlaRuleSettingRow = typeof slaRuleSettings.$inferSelect;
 export type InsertSlaRuleSetting = typeof slaRuleSettings.$inferInsert;
 
+
+
+/**
+ * Blind Detail Hub settings. Supports system-level defaults and project-level overrides.
+ * Int fields store booleans for MySQL/TiDB compatibility.
+ */
+export const blindHubSettings = mysqlTable("blind_hub_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  scopeType: mysqlEnum("scopeType", ["system", "project"]).default("system").notNull(),
+  projectId: varchar("projectId", { length: 40 }),
+
+  showOverviewTab: int("showOverviewTab").default(1).notNull(),
+  showWorkflowTab: int("showWorkflowTab").default(1).notNull(),
+  showComplianceTab: int("showComplianceTab").default(1).notNull(),
+  showFieldActionsTab: int("showFieldActionsTab").default(1).notNull(),
+  showQrMobileTab: int("showQrMobileTab").default(1).notNull(),
+  showCertificateHistoryTab: int("showCertificateHistoryTab").default(1).notNull(),
+
+  enablePtw: int("enablePtw").default(1).notNull(),
+  enableLoto: int("enableLoto").default(1).notNull(),
+  enableRiskAssessment: int("enableRiskAssessment").default(1).notNull(),
+  enableGasTest: int("enableGasTest").default(1).notNull(),
+  enableTorqueRecords: int("enableTorqueRecords").default(1).notNull(),
+  enableNdeRecords: int("enableNdeRecords").default(1).notNull(),
+  enableMtrRecords: int("enableMtrRecords").default(1).notNull(),
+  enableLeakTest: int("enableLeakTest").default(1).notNull(),
+  enablePhotoEvidence: int("enablePhotoEvidence").default(1).notNull(),
+  enableQrPublicView: int("enableQrPublicView").default(1).notNull(),
+  enableOfflineMobile: int("enableOfflineMobile").default(1).notNull(),
+  enableShiftHandover: int("enableShiftHandover").default(1).notNull(),
+  enableCertificateHash: int("enableCertificateHash").default(1).notNull(),
+  enableEmailShare: int("enableEmailShare").default(0).notNull(),
+
+  requireChecklistBeforeAdvance: int("requireChecklistBeforeAdvance").default(1).notNull(),
+  requireTorqueBeforeFinalTight: int("requireTorqueBeforeFinalTight").default(1).notNull(),
+  requireInspectionBeforeCertificate: int("requireInspectionBeforeCertificate").default(1).notNull(),
+  requireEvidenceBeforeCertificate: int("requireEvidenceBeforeCertificate").default(1).notNull(),
+  requirePtwBeforeFieldExecution: int("requirePtwBeforeFieldExecution").default(1).notNull(),
+  requireLotoBeforeFieldExecution: int("requireLotoBeforeFieldExecution").default(1).notNull(),
+  requireRiskBeforeFieldExecution: int("requireRiskBeforeFieldExecution").default(1).notNull(),
+  requireAllApprovalsBeforeCertificate: int("requireAllApprovalsBeforeCertificate").default(1).notNull(),
+
+  minEvidenceCount: int("minEvidenceCount").default(1).notNull(),
+  certificateMode: varchar("certificateMode", { length: 40 }).default("manual").notNull(),
+  publicQrDataLevel: varchar("publicQrDataLevel", { length: 40 }).default("standard").notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedByOpenId: varchar("updatedByOpenId", { length: 64 }),
+}, (table) => ({
+  blindHubSettingsScopeUnique: uniqueIndex("blind_hub_settings_scope_unique").on(table.scopeType, table.projectId),
+}));
+
+/** Certificate records generated from Blind Detail Hub readiness. */
+export const blindCertificates = mysqlTable("blind_certificates", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  certificateNumber: varchar("certificateNumber", { length: 120 }).notNull(),
+  status: varchar("status", { length: 40 }).default("draft").notNull(),
+  readinessJson: text("readinessJson"),
+  certificateJson: text("certificateJson"),
+  pdfUrl: text("pdfUrl"),
+  hash: varchar("hash", { length: 128 }),
+  previousHash: varchar("previousHash", { length: 128 }),
+  issuedByOpenId: varchar("issuedByOpenId", { length: 64 }),
+  issuedByName: varchar("issuedByName", { length: 200 }),
+  issuedAt: timestamp("issuedAt"),
+  revokedByOpenId: varchar("revokedByOpenId", { length: 64 }),
+  revokedAt: timestamp("revokedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  blindCertificateUnique: uniqueIndex("blind_certificate_unique").on(table.projectId, table.blindTag, table.certificateNumber),
+}));
+
+/** Certificate lifecycle events for generation, regeneration, print, and revoke actions. */
+export const blindCertificateEvents = mysqlTable("blind_certificate_events", {
+  id: int("id").autoincrement().primaryKey(),
+  certificateId: int("certificateId").references(() => blindCertificates.id),
+  projectId: varchar("projectId", { length: 40 }).notNull(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull(),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  eventJson: text("eventJson"),
+  actorOpenId: varchar("actorOpenId", { length: 64 }),
+  actorName: varchar("actorName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Field notes linked directly to Blind Detail Hub field actions. */
+export const blindFieldNotes = mysqlTable("blind_field_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  phase: blindPhaseEnum.notNull(),
+  note: text("note").notNull(),
+  source: varchar("source", { length: 40 }).default("web").notNull(),
+  voiceText: text("voiceText"),
+  submittedByOpenId: varchar("submittedByOpenId", { length: 64 }),
+  submittedByName: varchar("submittedByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Required-action checklist generated for workflow readiness and certificate blockers. */
+export const blindRequiredActions = mysqlTable("blind_required_actions", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  phase: blindPhaseEnum.notNull(),
+  actionKey: varchar("actionKey", { length: 120 }).notNull(),
+  label: varchar("label", { length: 240 }).notNull(),
+  required: int("required").default(1).notNull(),
+  completed: int("completed").default(0).notNull(),
+  completedByOpenId: varchar("completedByOpenId", { length: 64 }),
+  completedAt: timestamp("completedAt"),
+  source: varchar("source", { length: 80 }).default("system").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  blindRequiredActionUnique: uniqueIndex("blind_required_action_unique").on(table.projectId, table.blindTag, table.phase, table.actionKey),
+}));
+
+export type BlindHubSettingsRow = typeof blindHubSettings.$inferSelect;
+export type InsertBlindHubSettings = typeof blindHubSettings.$inferInsert;
+export type BlindCertificateRow = typeof blindCertificates.$inferSelect;
+export type InsertBlindCertificate = typeof blindCertificates.$inferInsert;
+export type BlindFieldNoteRow = typeof blindFieldNotes.$inferSelect;
+export type InsertBlindFieldNote = typeof blindFieldNotes.$inferInsert;

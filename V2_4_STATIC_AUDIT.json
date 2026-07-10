@@ -1,0 +1,20 @@
+{
+  "version": "2.4.0",
+  "missingLocalImports": [],
+  "arabicExecutableNonTestLines": [],
+  "routeCount": 30,
+  "newRoutes": [
+    "/projects/:projectId/blinds/:tag/hub",
+    "/areas/:areaId/projects/:projectId/blinds/:tag/hub",
+    "/settings/blind-hub"
+  ],
+  "newTables": [
+    "blind_hub_settings",
+    "blind_certificates",
+    "blind_certificate_events",
+    "blind_field_notes",
+    "blind_required_actions"
+  ],
+  "newRouter": "blindHub",
+  "newMigration": "0017_blind_detail_hub_full_integration"
+}

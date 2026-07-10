@@ -228,3 +228,14 @@ export {
   getSlaRules,
   upsertSlaRule,
 } from "./management";
+
+// Blind Detail Hub
+export {
+  addBlindHubFieldNote,
+  evaluateBlindCertificateReadiness,
+  generateBlindCertificate,
+  getBlindHubDetail,
+  getEffectiveBlindHubSettings,
+  updateBlindHubSettings,
+} from "./blindHub";
+export type { BlindHubActor, BlindHubSettingsInput } from "./blindHub";
