@@ -50,3 +50,22 @@ export function apiRateLimit(options: { windowMs: number; max: number }) {
     next();
   };
 }
+
+
+export function requestLogger(req: Request, res: Response, next: NextFunction) {
+  const startedAt = Date.now();
+  res.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    if (req.path.startsWith("/api/trpc")) {
+      console.info(JSON.stringify({
+        type: "http_request",
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs,
+        ip: req.ip,
+      }));
+    }
+  });
+  next();
+}

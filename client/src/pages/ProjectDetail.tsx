@@ -99,6 +99,19 @@ type BlindDraft = {
   type: BlindType;
   size: string;
   rate: string;
+  pressureClass: string;
+  material: string;
+  flangeType: string;
+  gasketType: string;
+  boltSize: string;
+  torqueValue: string;
+  thickness: string;
+  temperatureRating: string;
+  pidReference: string;
+  isoDrawingNumber: string;
+  installationDate: string;
+  removalDate: string;
+  expiryDate: string;
   phase: BlindPhase;
   owner: string;
   priority: BlindPriority;
@@ -139,6 +152,19 @@ type ExportBlind = {
   type: string;
   size: string;
   rate: string | null;
+  pressureClass?: string | null;
+  material?: string | null;
+  flangeType?: string | null;
+  gasketType?: string | null;
+  boltSize?: string | null;
+  torqueValue?: string | null;
+  thickness?: string | null;
+  temperatureRating?: string | null;
+  pidReference?: string | null;
+  isoDrawingNumber?: string | null;
+  installationDate?: string | Date | null;
+  removalDate?: string | Date | null;
+  expiryDate?: string | Date | null;
   phase: BlindPhase;
   owner: string;
   priority: BlindPriority;
@@ -188,6 +214,19 @@ const defaultBlindDraft: BlindDraft = {
   type: "Slip Blind",
   size: "",
   rate: "",
+  pressureClass: "",
+  material: "",
+  flangeType: "",
+  gasketType: "",
+  boltSize: "",
+  torqueValue: "",
+  thickness: "",
+  temperatureRating: "",
+  pidReference: "",
+  isoDrawingNumber: "",
+  installationDate: "",
+  removalDate: "",
+  expiryDate: "",
   phase: "Broken / Preparation",
   owner: "Project phase owner",
   priority: "Normal",
@@ -266,6 +305,19 @@ function draftFromBlind(blind: BlindDraft & { tag: string }) {
     type: normalizeBlindType(blind.type),
     size: blind.size,
     rate: blind.rate ?? "",
+    pressureClass: (blind as any).pressureClass ?? "",
+    material: (blind as any).material ?? "",
+    flangeType: (blind as any).flangeType ?? "",
+    gasketType: (blind as any).gasketType ?? "",
+    boltSize: (blind as any).boltSize ?? "",
+    torqueValue: (blind as any).torqueValue ?? "",
+    thickness: (blind as any).thickness ?? "",
+    temperatureRating: (blind as any).temperatureRating ?? "",
+    pidReference: (blind as any).pidReference ?? "",
+    isoDrawingNumber: (blind as any).isoDrawingNumber ?? "",
+    installationDate: (blind as any).installationDate ? String((blind as any).installationDate).slice(0, 10) : "",
+    removalDate: (blind as any).removalDate ? String((blind as any).removalDate).slice(0, 10) : "",
+    expiryDate: (blind as any).expiryDate ? String((blind as any).expiryDate).slice(0, 10) : "",
     phase: blind.phase,
     owner: blind.owner,
     priority: blind.priority,
@@ -695,6 +747,61 @@ function FieldGrid({
           </div>
         </div>
       )}
+
+
+      <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+        <div className="mb-4">
+          <div className="text-sm font-extrabold text-slate-950">
+            Industrial engineering metadata
+          </div>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+            Optional in v1.9, but required for inspection, torque validation, expiry alerts, and future safety compliance.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["pressureClass", "Pressure class", "150# / 300# / 600#"],
+            ["material", "Material", "Carbon Steel / SS / Alloy"],
+            ["flangeType", "Flange type", "RF / RTJ / FF"],
+            ["gasketType", "Gasket type", "Spiral Wound / Ring Joint"],
+            ["boltSize", "Bolt size", "1 in / M24"],
+            ["torqueValue", "Torque value", "Nm / PSI"],
+            ["thickness", "Blind thickness", "mm"],
+            ["temperatureRating", "Temperature rating", "°C"],
+            ["pidReference", "P&ID reference", "P&ID number"],
+            ["isoDrawingNumber", "ISO drawing no.", "ISO / spool drawing"],
+          ].map(([key, label, placeholder]) => (
+            <div key={key} className="space-y-2">
+              <Label htmlFor={`industrial-${key}`}>{label}</Label>
+              <Input
+                id={`industrial-${key}`}
+                value={(draft as any)[key] ?? ""}
+                onChange={event =>
+                  setDraft({ ...draft, [key]: event.target.value } as BlindDraft)
+                }
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+          {[
+            ["installationDate", "Installation date"],
+            ["removalDate", "Removal date"],
+            ["expiryDate", "Expiry date"],
+          ].map(([key, label]) => (
+            <div key={key} className="space-y-2">
+              <Label htmlFor={`industrial-${key}`}>{label}</Label>
+              <Input
+                id={`industrial-${key}`}
+                type="date"
+                value={(draft as any)[key] ?? ""}
+                onChange={event =>
+                  setDraft({ ...draft, [key]: event.target.value } as BlindDraft)
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="blind-notes">Notes</Label>

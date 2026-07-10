@@ -27,6 +27,19 @@ export function normalizeBlindRows(blindRows: (typeof blinds.$inferSelect)[]): B
     type: blind.type,
     size: blind.size,
     rate: blind.rate ?? null,
+    pressureClass: blind.pressureClass ?? null,
+    material: blind.material ?? null,
+    flangeType: blind.flangeType ?? null,
+    gasketType: blind.gasketType ?? null,
+    boltSize: blind.boltSize ?? null,
+    torqueValue: blind.torqueValue ?? null,
+    thickness: blind.thickness ?? null,
+    temperatureRating: blind.temperatureRating ?? null,
+    pidReference: blind.pidReference ?? null,
+    isoDrawingNumber: blind.isoDrawingNumber ?? null,
+    installationDate: blind.installationDate ?? null,
+    removalDate: blind.removalDate ?? null,
+    expiryDate: blind.expiryDate ?? null,
     phase: blind.phase as BlindPhase,
     owner: blind.owner,
     priority: blind.priority as BlindPriority,
@@ -61,6 +74,15 @@ function toNullableText(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+function toDateOnly(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+  }
+  const trimmed = String(value).trim();
+  return trimmed ? trimmed.slice(0, 10) : null;
+}
+
 function normalizeBlindInput(input: BlindInput): InsertBlind {
   return {
     projectId: input.projectId,
@@ -68,6 +90,19 @@ function normalizeBlindInput(input: BlindInput): InsertBlind {
     type: input.type.trim(),
     size: input.size.trim(),
     rate: toNullableText(input.rate),
+    pressureClass: toNullableText(input.pressureClass),
+    material: toNullableText(input.material),
+    flangeType: toNullableText(input.flangeType),
+    gasketType: toNullableText(input.gasketType),
+    boltSize: toNullableText(input.boltSize),
+    torqueValue: toNullableText(input.torqueValue),
+    thickness: toNullableText(input.thickness),
+    temperatureRating: toNullableText(input.temperatureRating),
+    pidReference: toNullableText(input.pidReference),
+    isoDrawingNumber: toNullableText(input.isoDrawingNumber),
+    installationDate: toDateOnly(input.installationDate),
+    removalDate: toDateOnly(input.removalDate),
+    expiryDate: toDateOnly(input.expiryDate),
     phase: input.phase ?? "Broken / Preparation",
     owner: input.owner?.trim() || "Project Phase Owner",
     priority: input.priority,

@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { permissionProcedure, router } from "../_core/trpc";
+import { permissionProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   getReportAreaSummaries,
   getReportBlinds,
@@ -34,7 +34,7 @@ export const reportsRouter = router({
   /**
    * Global executive summary statistics.
    */
-  globalStats: permissionProcedure("reports.view").query(async () => {
+  globalStats: protectedProcedure.query(async () => {
     return getReportGlobalStats();
   }),
 

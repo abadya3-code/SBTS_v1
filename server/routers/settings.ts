@@ -19,7 +19,30 @@ import {
   upsertSecuritySettings,
   getNotificationPreferences,
   upsertNotificationPreferences,
+  logAuditEvent,
 } from "../db";
+
+function requestAuditMeta(ctx: { req: { headers: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } } }) {
+  const forwardedFor = ctx.req.headers["x-forwarded-for"];
+  const ipAddress = typeof forwardedFor === "string"
+    ? forwardedFor.split(",")[0]?.trim()
+    : Array.isArray(forwardedFor)
+      ? String(forwardedFor[0])
+      : ctx.req.ip || ctx.req.socket?.remoteAddress || null;
+  const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : null;
+  return { ipAddress, userAgent };
+}
+
+async function auditedSettingsUpdate(ctx: any, action: string, entityId: string, after: unknown) {
+  await logAuditEvent({
+    actor: ctx.user,
+    action,
+    entityType: "settings",
+    entityId,
+    after,
+    ...requestAuditMeta(ctx),
+  }).catch(() => { /* audit logging must not block settings updates */ });
+}
 
 export const settingsRouter = router({
   general: router({
@@ -79,7 +102,9 @@ export const settingsRouter = router({
       if (input.dashboardCtaButtons !== undefined) data.dashboardCtaButtons = input.dashboardCtaButtons;
       if (input.versionName !== undefined) data.versionName = input.versionName;
       if (input.versionDate !== undefined) data.versionDate = input.versionDate;
-      return upsertSystemSettings(data, ctx.user.openId);
+      const result = await upsertSystemSettings(data, ctx.user.openId);
+      await auditedSettingsUpdate(ctx, "settings.general.update", "general", result);
+      return result;
     }),
 
     uploadImage: adminProcedure.input(z.object({
@@ -152,7 +177,9 @@ export const settingsRouter = router({
       if (input.tagShowQR !== undefined) data.tagShowQR = input.tagShowQR ? 1 : 0;
       if (input.tagHoleEnabled !== undefined) data.tagHoleEnabled = input.tagHoleEnabled ? 1 : 0;
       if (input.tagHolePosition !== undefined) data.tagHolePosition = input.tagHolePosition;
-      return upsertDefaultTagSettings(data, ctx.user.openId);
+      const result = await upsertDefaultTagSettings(data, ctx.user.openId);
+      await auditedSettingsUpdate(ctx, "settings.default_tag.update", "defaultTag", result);
+      return result;
     }),
   }),
 
@@ -216,7 +243,9 @@ export const settingsRouter = router({
       for (const field of boolFields) {
         if (input[field] !== undefined) data[field] = input[field] ? 1 : 0;
       }
-      return upsertCertificateSettings(data, ctx.user.openId);
+      const result = await upsertCertificateSettings(data, ctx.user.openId);
+      await auditedSettingsUpdate(ctx, "settings.certificate.update", "certificate", result);
+      return result;
     }),
   }),
 
@@ -246,7 +275,9 @@ export const settingsRouter = router({
       for (const field of numFields) {
         if (input[field] !== undefined) data[field] = input[field];
       }
-      return upsertSecuritySettings(data, ctx.user.openId);
+      const result = await upsertSecuritySettings(data, ctx.user.openId);
+      await auditedSettingsUpdate(ctx, "settings.security.update", "security", result);
+      return result;
     }),
   }),
 
@@ -271,7 +302,9 @@ export const settingsRouter = router({
       for (const field of fields) {
         if (input[field] !== undefined) data[field] = input[field] ? 1 : 0;
       }
-      return upsertNotificationPreferences(data, ctx.user.openId);
+      const result = await upsertNotificationPreferences(data, ctx.user.openId);
+      await auditedSettingsUpdate(ctx, "settings.notifications.update", "notifications", result);
+      return result;
     }),
   }),
 });

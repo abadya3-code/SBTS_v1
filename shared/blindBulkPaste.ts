@@ -51,7 +51,7 @@ export function normalizeBulkBlindType(value: string): BulkBlindType {
 
 export function parseBooleanBulkCell(value: string | undefined) {
   const normalized = String(value ?? "").trim().toLowerCase();
-  return ["1", "yes", "y", "true", "approved", "done", "merged", "ok", "موافق", "نعم", "تم"].includes(normalized);
+  return ["1", "yes", "y", "true", "approved", "done", "merged", "ok"].includes(normalized);
 }
 
 export function splitBulkLine(line: string) {

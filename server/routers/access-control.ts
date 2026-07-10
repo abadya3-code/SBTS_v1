@@ -22,7 +22,19 @@ import {
   rejectUserRegistration,
   updateAccessControlModel,
   updateUserSystemRole,
+  logAuditEvent,
 } from "../db";
+
+function requestAuditMeta(ctx: { req: { headers: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } } }) {
+  const forwardedFor = ctx.req.headers["x-forwarded-for"];
+  const ipAddress = typeof forwardedFor === "string"
+    ? forwardedFor.split(",")[0]?.trim()
+    : Array.isArray(forwardedFor)
+      ? String(forwardedFor[0])
+      : ctx.req.ip || ctx.req.socket?.remoteAddress || null;
+  const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : null;
+  return { ipAddress, userAgent };
+}
 
 export const accessControlRouter = router({
   model: protectedProcedure.query(async () => getAccessControlModel()),
@@ -34,6 +46,14 @@ export const accessControlRouter = router({
     roleKeys: z.array(z.string().min(1).max(80)),
   })).mutation(async ({ input, ctx }) => {
     await assignRolesToUser(input.userId, input.roleKeys, ctx.user.openId);
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "user.roles.assign",
+      entityType: "user",
+      entityId: String(input.userId),
+      after: input,
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
     return { success: true };
   }),
 
@@ -42,6 +62,14 @@ export const accessControlRouter = router({
     role: z.enum(["user", "admin"]),
   })).mutation(async ({ input }) => {
     await updateUserSystemRole(input.userId, input.role);
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "user.system_role.update",
+      entityType: "user",
+      entityId: String(input.userId),
+      after: input,
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
     return { success: true };
   }),
 
@@ -55,6 +83,14 @@ export const accessControlRouter = router({
     phaseKeys: z.array(z.string()),
   }))).mutation(async ({ input }) => {
     await updateAccessControlModel(input);
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "access_control.roles.update",
+      entityType: "access_control",
+      entityId: "roles",
+      after: { roleCount: input.length, roleKeys: input.map((role) => role.key) },
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
     return { success: true };
   }),
 
@@ -96,11 +132,20 @@ export const accessControlRouter = router({
         actorOpenId: ctx.user.openId,
         actorName: ctx.user.name ?? undefined,
         type: "registration_approved",
-        title: "تم قبول طلب التسجيل",
-        body: `مرحباً ${targetUser.name ?? ""}! تم قبول طلب تسجيلك في نظام SBTS. يمكنك الآن الدخول والبدء باستخدام النظام.`,
+        title: "Registration approved",
+        body: `Hello ${targetUser.name ?? ""}, your SBTS registration request has been approved. You can now sign in and use the system.`,
         linkUrl: "/dashboard",
       }).catch(() => { /* non-critical */ });
     }
+
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "user.registration.approve",
+      entityType: "user",
+      entityId: String(input.userId),
+      after: { approved: true },
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
 
     return { success: true };
   }),
@@ -122,13 +167,22 @@ export const accessControlRouter = router({
         actorOpenId: ctx.user.openId,
         actorName: ctx.user.name ?? undefined,
         type: "registration_rejected",
-        title: "تم رفض طلب التسجيل",
+        title: "Registration rejected",
         body: input.reason
-          ? `نأسف لإبلاغك بأنه تم رفض طلب تسجيلك في نظام SBTS.\n\nالسبب: ${input.reason}`
-          : "نأسف لإبلاغك بأنه تم رفض طلب تسجيلك في نظام SBTS. يرجى التواصل مع المدير للمزيد من المعلومات.",
+          ? `Your SBTS registration request was rejected.\n\nReason: ${input.reason}`
+          : "Your SBTS registration request was rejected. Please contact an administrator for more information.",
         linkUrl: "/approve",
       }).catch(() => { /* non-critical */ });
     }
+
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "user.registration.reject",
+      entityType: "user",
+      entityId: String(input.userId),
+      after: { rejected: true, reason: input.reason ?? null },
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
 
     return { success: true };
   }),
@@ -153,16 +207,16 @@ export const accessControlRouter = router({
         actorOpenId: ctx.user.openId,
         actorName: ctx.user.name ?? undefined,
         type: "registration_request",
-        title: `طلب تسجيل جديد - ${ctx.user.name ?? ctx.user.openId}`,
-        body: `مستخدم جديد يطلب الانضمام إلى SBTS:\n\nالاسم: ${ctx.user.name ?? "غير محدد"}\nالتخصص: ${input.specialty}\nالقسم: ${input.department}\nرقم الموظف: ${input.employeeNumber}`,
+        title: `New registration request - ${ctx.user.name ?? ctx.user.openId}`,
+        body: `A new user is requesting SBTS access:\n\nName: ${ctx.user.name ?? "Not provided"}\nSpecialty: ${input.specialty}\nDepartment: ${input.department}\nEmployee No.: ${input.employeeNumber}`,
         linkUrl: "/users",
       }).catch(() => { /* non-critical */ });
     }
 
     // Also notify owner via system notification (non-critical)
     await notifyOwner({
-      title: `طلب تسجيل جديد - ${ctx.user.name ?? ctx.user.openId}`,
-      content: `مستخدم جديد يطلب الانضمام إلى SBTS:\n\nالاسم: ${ctx.user.name ?? "غير محدد"}\nالتخصص: ${input.specialty}\nالقسم: ${input.department}\nرقم الموظف: ${input.employeeNumber}\n\nيرجى مراجعة طلبات التسجيل في لوحة إدارة المستخدمين.`,
+      title: `New registration request - ${ctx.user.name ?? ctx.user.openId}`,
+      content: `A new user is requesting SBTS access:\n\nName: ${ctx.user.name ?? "Not provided"}\nSpecialty: ${input.specialty}\nDepartment: ${input.department}\nEmployee No.: ${input.employeeNumber}\n\nPlease review registration requests in User Management.`,
     }).catch(() => { /* non-critical */ });
 
     return { success: true };

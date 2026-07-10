@@ -92,6 +92,20 @@ export const blinds = mysqlTable("blinds", {
   type: varchar("type", { length: 120 }).notNull(),
   size: varchar("size", { length: 60 }).notNull(),
   rate: varchar("rate", { length: 60 }),
+  // Industrial engineering metadata required for field inspection and compliance
+  pressureClass: varchar("pressureClass", { length: 80 }),
+  material: varchar("material", { length: 120 }),
+  flangeType: varchar("flangeType", { length: 80 }),
+  gasketType: varchar("gasketType", { length: 120 }),
+  boltSize: varchar("boltSize", { length: 80 }),
+  torqueValue: varchar("torqueValue", { length: 80 }),
+  thickness: varchar("thickness", { length: 80 }),
+  temperatureRating: varchar("temperatureRating", { length: 80 }),
+  pidReference: varchar("pidReference", { length: 160 }),
+  isoDrawingNumber: varchar("isoDrawingNumber", { length: 160 }),
+  installationDate: date("installationDate"),
+  removalDate: date("removalDate"),
+  expiryDate: date("expiryDate"),
   phase: blindPhaseEnum.default("Broken / Preparation").notNull(),
   owner: varchar("owner", { length: 160 }).notNull(),
   priority: blindPriorityEnum.default("Normal").notNull(),
@@ -589,3 +603,27 @@ export const notifications = mysqlTable("notifications", {
 
 export type NotificationRow = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Immutable-style audit events. Stores compliance-critical actions across the system.
+ * Use beforeJson/afterJson as text to keep MySQL/TiDB compatibility simple.
+ */
+export const auditEvents = mysqlTable("audit_events", {
+  id: int("id").autoincrement().primaryKey(),
+  actorOpenId: varchar("actorOpenId", { length: 64 }),
+  actorName: varchar("actorName", { length: 200 }),
+  action: varchar("action", { length: 120 }).notNull(),
+  entityType: varchar("entityType", { length: 120 }).notNull(),
+  entityId: varchar("entityId", { length: 220 }),
+  beforeJson: text("beforeJson"),
+  afterJson: text("afterJson"),
+  ipAddress: varchar("ipAddress", { length: 80 }),
+  userAgent: varchar("userAgent", { length: 500 }),
+  hash: varchar("hash", { length: 128 }),
+  previousHash: varchar("previousHash", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditEventRow = typeof auditEvents.$inferSelect;
+export type InsertAuditEvent = typeof auditEvents.$inferInsert;
+

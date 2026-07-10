@@ -24,6 +24,7 @@ import {
   setBlindPhaseApproval,
   updateBlindInProject,
   updateProjectSettings,
+  logAuditEvent,
 } from "../db";
 import {
   blindCreateSchema,
@@ -49,6 +50,17 @@ const toActingUser = (ctxUser: RouterContextUser) => ({
   email: ctxUser.email ?? null,
   role: ctxUser.role,
 });
+
+function requestAuditMeta(ctx: { req: { headers: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } } }) {
+  const forwardedFor = ctx.req.headers["x-forwarded-for"];
+  const ipAddress = typeof forwardedFor === "string"
+    ? forwardedFor.split(",")[0]?.trim()
+    : Array.isArray(forwardedFor)
+      ? String(forwardedFor[0])
+      : ctx.req.ip || ctx.req.socket?.remoteAddress || null;
+  const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : null;
+  return { ipAddress, userAgent };
+}
 
 function enforceSlipBlindInput(
   input: { type?: string; slipMetalForemanApproved?: boolean; slipBlindMerged?: boolean },
@@ -102,12 +114,21 @@ export const projectsRouter = router({
           actorOpenId: ctx.user.openId,
           actorName: ctx.user.name ?? undefined,
           type: "project_created",
-          title: `مشروع جديد: ${input.name}`,
-          body: `تم إنشاء مشروع جديد "${input.name}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+          title: `New project: ${input.name}`,
+          body: `Project "${input.name}" was created by ${ctx.user.name ?? ctx.user.openId}.`,
           linkUrl: `/projects/${input.id}`,
           projectId: input.id,
         }).catch(() => { /* non-critical */ });
       }
+
+      await logAuditEvent({
+        actor: ctx.user,
+        action: "project.create",
+        entityType: "project",
+        entityId: input.id,
+        after: project,
+        ...requestAuditMeta(ctx),
+      }).catch(() => { /* audit logging must not block execution */ });
 
       return project;
     }),
@@ -127,7 +148,16 @@ export const projectsRouter = router({
         message: "Only the configured phase owner can add or update blinds in this phase.",
       });
     }
-    return addBlindToProject(input, actingUser);
+    const result = await addBlindToProject(input, actingUser);
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "blind.create",
+      entityType: "blind",
+      entityId: input.tag,
+      after: result,
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
+    return result;
   }),
 
   bulkAddBlinds: permissionProcedure("blinds.create")
@@ -151,7 +181,16 @@ export const projectsRouter = router({
           message: "Bulk import includes phases assigned to another owner.",
         });
       }
-      return bulkAddBlindsToProject(input.projectId, input.blinds);
+      const result = await bulkAddBlindsToProject(input.projectId, input.blinds);
+      await logAuditEvent({
+        actor: ctx.user,
+        action: "blind.bulk_create",
+        entityType: "blind",
+        entityId: input.projectId,
+        after: { count: result.count, tags: input.blinds.map((blind) => blind.tag) },
+        ...requestAuditMeta(ctx),
+      }).catch(() => { /* audit logging must not block execution */ });
+      return result;
     }),
 
   updateBlind: permissionProcedure("blinds.edit").input(blindUpdateSchema).mutation(async ({ input, ctx }) => {
@@ -175,6 +214,15 @@ export const projectsRouter = router({
     const settings = await getProjectSettings(input.projectId);
     enforceSlipBlindInput({ ...existing, ...input }, settings?.slipBlindGateRequired);
     const result = await updateBlindInProject(input, actingUser);
+    await logAuditEvent({
+      actor: ctx.user,
+      action: "blind.update",
+      entityType: "blind",
+      entityId: input.tag,
+      before: existing,
+      after: result,
+      ...requestAuditMeta(ctx),
+    }).catch(() => { /* audit logging must not block execution */ });
 
     // Notify phase owner if the blind moved to a different phase
     if (input.phase && input.phase !== existing.phase && settings) {
@@ -189,8 +237,8 @@ export const projectsRouter = router({
             actorOpenId: ctx.user.openId,
             actorName: ctx.user.name ?? undefined,
             type: "blind_phase_changed",
-            title: `تغيير مرحلة: ${input.tag}`,
-            body: `تم نقل الـ Blind "${input.tag}" من مرحلة "${existing.phase}" إلى مرحلة "${input.phase}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+            title: `Phase changed: ${input.tag}`,
+            body: `Blind "${input.tag}" was moved from "${existing.phase}" to "${input.phase}" by ${ctx.user.name ?? ctx.user.openId}.`,
             linkUrl: `/projects/${input.projectId}/blinds/${input.tag}`,
             projectId: input.projectId,
             blindTag: input.tag,
@@ -229,8 +277,8 @@ export const projectsRouter = router({
           actorOpenId: ctx.user.openId,
           actorName: ctx.user.name ?? undefined,
           type: "blind_phase_approval",
-          title: `موافقة إلكترونية: ${input.tag}`,
-          body: `تمت الموافقة الإلكترونية على مرحلة "${input.phase}" للـ Blind "${input.tag}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+          title: `Electronic approval: ${input.tag}`,
+          body: `Phase "${input.phase}" for blind "${input.tag}" was electronically approved by ${ctx.user.name ?? ctx.user.openId}.`,
           linkUrl: `/projects/${input.projectId}/blinds/${input.tag}`,
           blindTag: input.tag,
         }).catch(() => { /* non-critical */ });
@@ -280,8 +328,8 @@ export const projectsRouter = router({
               actorOpenId: ctx.user.openId,
               actorName: ctx.user.name ?? undefined,
               type: "phase_owner_assigned",
-              title: `تم تعيينك مالكاً لمرحلة`,
-              body: `تم تعيينك مالكاً لمرحلة "${phase}" في المشروع "${input.projectId}" بواسطة ${ctx.user.name ?? ctx.user.openId}.`,
+              title: `You were assigned as phase owner`,
+              body: `You were assigned as owner for phase "${phase}" in project "${input.projectId}" by ${ctx.user.name ?? ctx.user.openId}.`,
               linkUrl: `/projects/${input.projectId}`,
             }).catch(() => { /* non-critical */ }),
           ),

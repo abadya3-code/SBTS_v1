@@ -6,7 +6,7 @@
  * to support all report types and export formats.
  */
 
-import { asc, eq, gte, lte, and, inArray } from "drizzle-orm";
+import { asc, desc, eq, gte, lte, and, inArray } from "drizzle-orm";
 import {
   areas, blinds, blindPhaseApprovals, blindWorkflowLogs,
   projectPhaseOwners, projects,
@@ -334,7 +334,7 @@ export async function getReportGlobalStats(): Promise<{
     db.select().from(areas),
     db.select().from(projects),
     db.select().from(blinds),
-    db.select().from(blindWorkflowLogs).orderBy(asc(blindWorkflowLogs.createdAt)).limit(20),
+    db.select().from(blindWorkflowLogs).orderBy(desc(blindWorkflowLogs.createdAt)).limit(20),
   ]);
 
   const phaseCounts = emptyPhaseCounts();

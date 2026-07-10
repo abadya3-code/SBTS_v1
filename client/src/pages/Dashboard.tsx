@@ -11,11 +11,19 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { appMeta, phases, recentEvents } from "@/lib/mockData";
+import { appMeta } from "@/lib/mockData";
 import { trpc } from "@/lib/trpc";
 
 const defaultHeroUrl =
   "https://d2xsxph8kpxj0f.cloudfront.net/95256836/T9nk6A5dkk7H7GaCBwTuhX/sbts-command-center-hero-UhGNvmibStQht4VPE3rmFJ.webp";
+
+const phaseColors: Record<string, string> = {
+  "Broken / Preparation": "#f59e0b",
+  Assembly: "#2563eb",
+  "Tight & Torque": "#7c3aed",
+  "Final Tight": "#10b981",
+  "Inspection Ready": "#0e7490",
+};
 
 function asNumber(value: unknown, fallback = 0) {
   const n = Number(value);
@@ -43,16 +51,9 @@ function parseCtaButtons(value: unknown) {
 
 export default function Dashboard() {
   const { data: generalSettings } = trpc.settings.general.get.useQuery();
-  const { data: slipStats } = trpc.slipBlinds.stats.useQuery(undefined, {
+  const { data: stats, isLoading, isError, refetch } = trpc.reports.globalStats.useQuery(undefined, {
     staleTime: 30_000,
   });
-  const { data: projects = [] } = trpc.projects.list.useQuery(undefined, {
-    staleTime: 30_000,
-  });
-  const { data: recentBlinds } = trpc.slipBlinds.list.useQuery(
-    { limit: 6, offset: 0 },
-    { staleTime: 30_000 }
-  );
 
   const appName = (generalSettings as any)?.appName || appMeta.title;
   const companyName = (generalSettings as any)?.companyName || appMeta.site;
@@ -64,7 +65,7 @@ export default function Dashboard() {
     (generalSettings as any)?.dashboardHeroDescription ||
     "Monitor blind status, project execution, workflow ownership, safety critical exposure, and field-ready QR visibility from one professional operations screen.";
   const heroBadge =
-    (generalSettings as any)?.dashboardHeroBadge || "Live operations dashboard";
+    (generalSettings as any)?.dashboardHeroBadge || "Live database dashboard";
   const heroImage =
     (generalSettings as any)?.dashboardHeroImageUrl || defaultHeroUrl;
   const ctaButtons = parseCtaButtons(
@@ -73,18 +74,28 @@ export default function Dashboard() {
   const versionName = (generalSettings as any)?.versionName || appMeta.version;
   const versionDate = (generalSettings as any)?.versionDate || "";
 
-  const totalBlinds = asNumber(
-    (slipStats as any)?.total,
-    phases.reduce((sum, phase) => sum + phase.count, 0)
-  );
-  const inService = asNumber((slipStats as any)?.inService);
-  const removed = asNumber((slipStats as any)?.removed);
-  const merged = asNumber((slipStats as any)?.merged);
-  const critical = asNumber((slipStats as any)?.critical);
-  const completion =
-    totalBlinds > 0 ? Math.round(((removed + merged) / totalBlinds) * 100) : 0;
-  const activeProjects = projects.length;
-  const blindRows = (recentBlinds as any)?.rows ?? [];
+  const totalBlinds = asNumber((stats as any)?.totalBlinds);
+  const completedBlinds = asNumber((stats as any)?.completedBlinds);
+  const inProgressBlinds = asNumber((stats as any)?.inProgressBlinds);
+  const criticalBlinds = asNumber((stats as any)?.criticalBlinds);
+  const activeProjects = asNumber((stats as any)?.totalProjects);
+  const completion = asNumber((stats as any)?.completionRate);
+  const totalAreas = asNumber((stats as any)?.totalAreas);
+  const phaseCounts = ((stats as any)?.phaseCounts ?? {}) as Record<string, number>;
+  const priorityCounts = ((stats as any)?.priorityCounts ?? {}) as Record<string, number>;
+  const recentActivity = ((stats as any)?.recentActivity ?? []) as Array<{
+    date: string | Date;
+    action: string;
+    actor: string;
+    blindTag: string;
+    projectId: string;
+  }>;
+
+  const phaseRows = Object.entries(phaseCounts).map(([phase, count]) => ({
+    phase,
+    count: asNumber(count),
+    color: phaseColors[phase] ?? "#64748b",
+  }));
 
   const metricCards = [
     {
@@ -92,30 +103,50 @@ export default function Dashboard() {
       value: totalBlinds,
       icon: FileWarning,
       tone: "text-cyan-200",
-      hint: "Total registered blinds",
+      hint: "Total records from database",
     },
     {
-      label: "In service",
-      value: inService,
-      icon: ShieldCheck,
-      tone: "text-emerald-300",
-      hint: "Active field blinds",
-    },
-    {
-      label: "Removed / merged",
-      value: removed + merged,
+      label: "Completed",
+      value: completedBlinds,
       icon: CheckCircle2,
+      tone: "text-emerald-300",
+      hint: "Inspection Ready phase",
+    },
+    {
+      label: "In progress",
+      value: inProgressBlinds,
+      icon: ShieldCheck,
       tone: "text-blue-200",
-      hint: "Completed removal or merged state",
+      hint: "Active execution phases",
     },
     {
       label: "Critical",
-      value: critical,
+      value: criticalBlinds,
       icon: ShieldAlert,
       tone: "text-red-300",
-      hint: "High attention records",
+      hint: "Critical-priority blinds",
     },
   ];
+
+  if (isError) {
+    return (
+      <div className="sbts-card p-6">
+        <h2 className="text-xl font-extrabold text-slate-950 dark:text-white">
+          Dashboard data could not be loaded
+        </h2>
+        <p className="mt-2 text-sm text-slate-500">
+          The dashboard now uses live database queries. Retry after checking DB connectivity and user access.
+        </p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-5 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white"
+        >
+          Retry dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -158,21 +189,9 @@ export default function Dashboard() {
               {(ctaButtons.length
                 ? ctaButtons
                 : [
-                    {
-                      label: "Open Projects",
-                      href: "/projects",
-                      variant: "primary",
-                    },
-                    {
-                      label: "Review Blind Registry",
-                      href: "/blinds",
-                      variant: "secondary",
-                    },
-                    {
-                      label: "System Settings",
-                      href: "/settings",
-                      variant: "secondary",
-                    },
+                    { label: "Open Projects", href: "/projects", variant: "primary" },
+                    { label: "Review Blind Registry", href: "/blinds", variant: "secondary" },
+                    { label: "Audit Center", href: "/audit", variant: "secondary" },
                   ]
               ).map((button, index) => (
                 <Link
@@ -200,13 +219,13 @@ export default function Dashboard() {
                         {item.label}
                       </span>
                       <div className="mt-1 text-xs text-slate-400">
-                        {item.hint}
+                        {isLoading ? "Loading live data..." : item.hint}
                       </div>
                     </div>
                     <Icon className={`h-5 w-5 ${item.tone}`} />
                   </div>
                   <div className="mt-3 text-3xl font-extrabold tracking-tight">
-                    {item.value}
+                    {isLoading ? "…" : item.value}
                   </div>
                 </div>
               );
@@ -223,8 +242,7 @@ export default function Dashboard() {
                 Project execution health
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                Live project and blind readiness indicators connected to the
-                database.
+                Live project and blind readiness indicators connected directly to the database.
               </p>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -234,64 +252,54 @@ export default function Dashboard() {
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               <FolderKanban className="h-5 w-5 text-cyan-600" />
-              <div className="mt-3 text-2xl font-extrabold">
-                {activeProjects}
-              </div>
-              <div className="text-xs font-bold text-slate-500">
-                Active projects
-              </div>
+              <div className="mt-3 text-2xl font-extrabold">{activeProjects}</div>
+              <div className="text-xs font-bold text-slate-500">Total projects</div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               <Gauge className="h-5 w-5 text-emerald-600" />
               <div className="mt-3 text-2xl font-extrabold">{completion}%</div>
-              <div className="text-xs font-bold text-slate-500">
-                Removal / merge readiness
-              </div>
+              <div className="text-xs font-bold text-slate-500">Completion rate</div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               <Users className="h-5 w-5 text-amber-600" />
-              <div className="mt-3 text-2xl font-extrabold">8</div>
-              <div className="text-xs font-bold text-slate-500">
-                Operational roles
-              </div>
+              <div className="mt-3 text-2xl font-extrabold">{totalAreas}</div>
+              <div className="text-xs font-bold text-slate-500">Plant areas</div>
             </div>
           </div>
           <div className="mt-5 space-y-3">
-            {phases.map(phase => (
-              <div
-                key={phase.key}
-                className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-cyan-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
-              >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="status-dot"
-                      style={{ backgroundColor: phase.color }}
-                    />
-                    <div>
-                      <div className="font-extrabold text-slate-900 dark:text-slate-100">
-                        {phase.label}
-                      </div>
-                      <div className="text-xs font-semibold text-slate-500">
-                        Default owner: {phase.owner}
+            {phaseRows.length > 0 ? phaseRows.map(phase => {
+              const pct = totalBlinds > 0 ? Math.round((phase.count / totalBlinds) * 100) : 0;
+              return (
+                <div
+                  key={phase.phase}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-cyan-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="status-dot" style={{ backgroundColor: phase.color }} />
+                      <div>
+                        <div className="font-extrabold text-slate-900 dark:text-slate-100">
+                          {phase.phase}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500">
+                          {pct}% of registered blinds
+                        </div>
                       </div>
                     </div>
+                    <div className="text-2xl font-extrabold text-slate-950 dark:text-slate-100">
+                      {phase.count}
+                    </div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-950 dark:text-slate-100">
-                    {phase.count}
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: phase.color }} />
                   </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.min(100, phase.count * 2.4)}%`,
-                      backgroundColor: phase.color,
-                    }}
-                  />
-                </div>
+              );
+            }) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-semibold text-slate-500 dark:border-slate-800">
+                No blind records yet. Add blinds to see workflow phase distribution.
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -299,56 +307,37 @@ export default function Dashboard() {
           <div className="sbts-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-extrabold text-slate-950 dark:text-slate-100">
-                Recent blind focus
+                Recent database activity
               </h3>
               <Clock3 className="h-5 w-5 text-slate-400" />
             </div>
             <div className="space-y-3">
-              {blindRows.length > 0
-                ? blindRows.map((blind: any) => (
-                    <Link
-                      key={`${blind.projectId}-${blind.tag}`}
-                      href={`/projects/${blind.projectId}/blinds/${encodeURIComponent(blind.tag)}`}
-                      className="flex gap-3 rounded-2xl bg-slate-50 p-3 transition hover:bg-cyan-50 dark:bg-slate-950 dark:hover:bg-slate-800"
-                    >
-                      <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40">
-                        <FileWarning className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                          {blind.tag}
-                        </div>
-                        <div className="mt-1 text-xs leading-5 text-slate-500">
-                          {blind.projectName ?? blind.projectId} · {blind.type}{" "}
-                          · {blind.phase ?? blind.slipStatus}
-                        </div>
-                      </div>
-                      <div className="text-xs font-bold text-slate-400">
-                        {blind.priority}
-                      </div>
-                    </Link>
-                  ))
-                : recentEvents.map(event => (
-                    <div
-                      key={`${event.title}-${event.time}`}
-                      className="flex gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950"
-                    >
-                      <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                          {event.title}
-                        </div>
-                        <div className="mt-1 text-xs leading-5 text-slate-500">
-                          {event.detail}
-                        </div>
-                      </div>
-                      <div className="text-xs font-bold text-slate-400">
-                        {event.time}
-                      </div>
+              {recentActivity.length > 0 ? recentActivity.slice(0, 6).map(event => (
+                <Link
+                  key={`${event.projectId}-${event.blindTag}-${event.date}`}
+                  href={`/projects/${event.projectId}/blinds/${encodeURIComponent(event.blindTag)}`}
+                  className="flex gap-3 rounded-2xl bg-slate-50 p-3 transition hover:bg-cyan-50 dark:bg-slate-950 dark:hover:bg-slate-800"
+                >
+                  <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40">
+                    <FileWarning className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                      {event.action}
                     </div>
-                  ))}
+                    <div className="mt-1 text-xs leading-5 text-slate-500">
+                      {event.blindTag} · {event.projectId} · {event.actor}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-slate-400">
+                    {event.date ? new Date(event.date).toLocaleDateString() : "—"}
+                  </div>
+                </Link>
+              )) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-semibold text-slate-500 dark:border-slate-800">
+                  No workflow logs yet. Activity will appear here after blinds are added or updated.
+                </div>
+              )}
             </div>
           </div>
 
@@ -359,9 +348,7 @@ export default function Dashboard() {
                   Version & system
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  Version information is now shown as system metadata, while
-                  identity and hero content are controlled from General
-                  Settings.
+                  Version information is shown as system metadata while identity and hero content are controlled from General Settings.
                 </p>
               </div>
               <TrendingUp className="h-5 w-5 text-cyan-600" />
@@ -378,6 +365,13 @@ export default function Dashboard() {
                   Release date: {versionDate}
                 </div>
               )}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {Object.entries(priorityCounts).map(([priority, count]) => (
+                  <div key={priority} className="rounded-xl bg-white p-3 text-xs font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+                    {priority}: <span className="text-slate-950 dark:text-white">{String(count)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
