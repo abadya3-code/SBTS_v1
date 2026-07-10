@@ -627,3 +627,85 @@ export const auditEvents = mysqlTable("audit_events", {
 export type AuditEventRow = typeof auditEvents.$inferSelect;
 export type InsertAuditEvent = typeof auditEvents.$inferInsert;
 
+
+/**
+ * Field photo/evidence attachments for each blind phase.
+ * dataUrl is used for pilot/Railway simplicity; production can migrate to object storage URL.
+ */
+export const blindEvidence = mysqlTable("blind_evidence", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  phase: blindPhaseEnum.notNull(),
+  evidenceType: varchar("evidenceType", { length: 80 }).default("photo").notNull(),
+  fileName: varchar("fileName", { length: 255 }),
+  mimeType: varchar("mimeType", { length: 120 }),
+  dataUrl: text("dataUrl"),
+  caption: text("caption"),
+  uploadedByOpenId: varchar("uploadedByOpenId", { length: 64 }),
+  uploadedByName: varchar("uploadedByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Safety checklist per blind phase. */
+export const blindSafetyChecklists = mysqlTable("blind_safety_checklists", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  phase: blindPhaseEnum.notNull(),
+  checklistJson: text("checklistJson").notNull(),
+  status: varchar("status", { length: 40 }).default("draft").notNull(),
+  completedByOpenId: varchar("completedByOpenId", { length: 64 }),
+  completedByName: varchar("completedByName", { length: 200 }),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  blindPhaseChecklistUnique: uniqueIndex("blind_phase_checklist_unique").on(table.blindTag, table.projectId, table.phase),
+}));
+
+/** Torque / bolting records for inspection traceability. */
+export const blindTorqueRecords = mysqlTable("blind_torque_records", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  phase: blindPhaseEnum.default("Tight & Torque").notNull(),
+  boltNo: varchar("boltNo", { length: 40 }),
+  boltSize: varchar("boltSize", { length: 80 }),
+  torqueValue: varchar("torqueValue", { length: 80 }).notNull(),
+  torqueUnit: varchar("torqueUnit", { length: 40 }).default("Nm").notNull(),
+  toolId: varchar("toolId", { length: 120 }),
+  technicianName: varchar("technicianName", { length: 200 }),
+  verifiedByName: varchar("verifiedByName", { length: 200 }),
+  notes: text("notes"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Inspection package records: NDE, MTR, gasket tracking, leak test, punch list. */
+export const blindInspectionRecords = mysqlTable("blind_inspection_records", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  recordType: varchar("recordType", { length: 80 }).notNull(),
+  referenceNo: varchar("referenceNo", { length: 160 }),
+  result: varchar("result", { length: 80 }).default("Pending").notNull(),
+  description: text("description"),
+  fileName: varchar("fileName", { length: 255 }),
+  mimeType: varchar("mimeType", { length: 120 }),
+  dataUrl: text("dataUrl"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BlindEvidenceRow = typeof blindEvidence.$inferSelect;
+export type InsertBlindEvidence = typeof blindEvidence.$inferInsert;
+export type BlindSafetyChecklistRow = typeof blindSafetyChecklists.$inferSelect;
+export type InsertBlindSafetyChecklist = typeof blindSafetyChecklists.$inferInsert;
+export type BlindTorqueRecordRow = typeof blindTorqueRecords.$inferSelect;
+export type InsertBlindTorqueRecord = typeof blindTorqueRecords.$inferInsert;
+export type BlindInspectionRecordRow = typeof blindInspectionRecords.$inferSelect;
+export type InsertBlindInspectionRecord = typeof blindInspectionRecords.$inferInsert;
+

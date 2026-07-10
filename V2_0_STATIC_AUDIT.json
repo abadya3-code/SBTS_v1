@@ -1,0 +1,120 @@
+{
+  "version": "2.0.0",
+  "missingImports": [],
+  "arabicExecutableLines": [],
+  "routeCount": 23,
+  "pages": [
+    "AccessControl",
+    "Approve",
+    "Areas",
+    "AuditCenter",
+    "BlindCertificate",
+    "BlindDetail",
+    "Blinds",
+    "ComplianceCenter",
+    "Dashboard",
+    "Login",
+    "NotFound",
+    "Notifications",
+    "ProjectDetail",
+    "Projects",
+    "Register",
+    "Reports",
+    "SystemSettings",
+    "UserManagement",
+    "UserProfile",
+    "WorkflowStudio"
+  ],
+  "largePages": [
+    [
+      "SystemSettings.tsx",
+      2676
+    ],
+    [
+      "ProjectDetail.tsx",
+      1873
+    ],
+    [
+      "Reports.tsx",
+      1058
+    ],
+    [
+      "UserManagement.tsx",
+      953
+    ],
+    [
+      "Blinds.tsx",
+      919
+    ],
+    [
+      "UserProfile.tsx",
+      726
+    ],
+    [
+      "WorkflowStudio.tsx",
+      583
+    ],
+    [
+      "Register.tsx",
+      560
+    ],
+    [
+      "Dashboard.tsx",
+      381
+    ],
+    [
+      "Login.tsx",
+      336
+    ],
+    [
+      "AccessControl.tsx",
+      319
+    ],
+    [
+      "ComplianceCenter.tsx",
+      319
+    ],
+    [
+      "Approve.tsx",
+      297
+    ],
+    [
+      "Notifications.tsx",
+      292
+    ],
+    [
+      "BlindCertificate.tsx",
+      282
+    ],
+    [
+      "AuditCenter.tsx",
+      246
+    ],
+    [
+      "Projects.tsx",
+      243
+    ],
+    [
+      "BlindDetail.tsx",
+      224
+    ],
+    [
+      "Areas.tsx",
+      162
+    ],
+    [
+      "NotFound.tsx",
+      16
+    ]
+  ],
+  "newTables": [
+    "blind_evidence",
+    "blind_safety_checklists",
+    "blind_torque_records",
+    "blind_inspection_records"
+  ],
+  "newRoutes": [
+    "/compliance"
+  ],
+  "newRouter": "fieldCompliance"
+}

@@ -2,7 +2,7 @@
 Design Philosophy: Industrial Command Center Minimalism.
 This file centralizes current frontend domain models and mock data so future API integration can replace one source of truth without scattering sample objects across pages.
 */
-import { Activity, BarChart3, Bell, ClipboardCheck, FileText, FolderKanban, Gauge, GitBranch, ListChecks, LockKeyhole, MapPinned, ShieldCheck, SlidersHorizontal, Users, Wrench } from "lucide-react";
+import { Activity, BarChart3, Bell, ClipboardCheck, FileText, FolderKanban, Gauge, GitBranch, ListChecks, LockKeyhole, MapPinned, ShieldCheck, ShieldAlert, SlidersHorizontal, Users, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type PhaseKey = "broken" | "assembly" | "tightTorque" | "finalTight" | "inspectionReady";
@@ -45,6 +45,7 @@ export const navItems: { key: string; label: string; path: string; icon: LucideI
   { key: "notifications", label: "Notifications", path: "/notifications", icon: Bell, description: "In-app alerts and updates" },
   { key: "reports", label: "Reports", path: "/reports", icon: BarChart3, description: "Operational reports and exports" },
   { key: "audit", label: "Audit Center", path: "/audit", icon: Activity, description: "Compliance and traceability controls" },
+  { key: "compliance", label: "Compliance", path: "/compliance", icon: ShieldAlert, description: "Safety, inspection, torque, evidence" },
 ];
 
 export const secondaryNavItems: { key: string; label: string; icon: LucideIcon }[] = [];
@@ -157,6 +158,14 @@ export const permissionGroups: { group: string; icon: LucideIcon; permissions: P
     ],
   },
   {
+    group: "Industrial Compliance",
+    icon: ShieldAlert,
+    permissions: [
+      { key: "compliance.view", label: "View compliance", description: "Read safety, evidence, torque, expiry, and inspection records", group: "Industrial Compliance" },
+      { key: "compliance.manage", label: "Manage compliance", description: "Create checklists, evidence, torque, and inspection records", group: "Industrial Compliance" },
+    ],
+  },
+  {
     group: "Reports & Certificates",
     icon: FileText,
     permissions: [
@@ -178,7 +187,7 @@ export const initialRoles: RoleModel[] = [
     members: 2,
     color: "#38bdf8",
     permissionKeys: allPermissionKeys,
-    menuKeys: ["dashboard", "projects", "blinds", "access-control", "reports", "audit", "settings"],
+    menuKeys: ["dashboard", "projects", "blinds", "compliance", "access-control", "reports", "audit", "settings"],
     phaseKeys: phases.map((phase) => phase.key),
   },
   {
@@ -187,8 +196,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Project setup, area control, assignment follow-up",
     members: 4,
     color: "#60a5fa",
-    permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "workflow.view", "reports.view", "users.view"],
-    menuKeys: ["dashboard", "projects", "blinds", "reports"],
+    permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "workflow.view", "reports.view", "users.view", "compliance.view"],
+    menuKeys: ["dashboard", "projects", "blinds", "compliance", "reports"],
     phaseKeys: ["broken"],
   },
   {
@@ -197,8 +206,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Field execution and blind status updates",
     members: 18,
     color: "#f59e0b",
-    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "qr.manage"],
-    menuKeys: ["dashboard", "blinds"],
+    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "qr.manage", "compliance.view", "compliance.manage"],
+    menuKeys: ["dashboard", "blinds", "compliance"],
     phaseKeys: ["assembly"],
   },
   {
@@ -207,8 +216,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Quality verification and final tightening approval",
     members: 7,
     color: "#22c55e",
-    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "audit.view"],
-    menuKeys: ["dashboard", "blinds", "reports", "audit"],
+    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "audit.view", "compliance.view", "compliance.manage"],
+    menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"],
     phaseKeys: ["finalTight", "inspectionReady"],
   },
   {
@@ -217,8 +226,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Safety oversight, restrictions, and compliance review",
     members: 5,
     color: "#ef4444",
-    permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "reports.view", "audit.view"],
-    menuKeys: ["dashboard", "blinds", "reports", "audit"],
+    permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "reports.view", "audit.view", "compliance.view", "compliance.manage"],
+    menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"],
     phaseKeys: ["broken", "inspectionReady"],
   },
   {
@@ -227,8 +236,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Torque gate owner and technical validation",
     members: 6,
     color: "#eab308",
-    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view"],
-    menuKeys: ["dashboard", "blinds", "reports"],
+    permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "compliance.view", "compliance.manage"],
+    menuKeys: ["dashboard", "blinds", "compliance", "reports"],
     phaseKeys: ["tightTorque"],
   },
   {
@@ -237,8 +246,8 @@ export const initialRoles: RoleModel[] = [
     subtitle: "Final inspection readiness and certificate package review",
     members: 9,
     color: "#3b82f6",
-    permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view"],
-    menuKeys: ["dashboard", "blinds", "reports", "audit"],
+    permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view", "compliance.view"],
+    menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"],
     phaseKeys: ["inspectionReady"],
   },
 ];

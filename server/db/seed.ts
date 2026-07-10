@@ -109,6 +109,13 @@ export const seedPermissionGroups: PermissionGroupModel[] = [
     ],
   },
   {
+    group: "Industrial Compliance",
+    permissions: [
+      { key: "compliance.view", label: "View compliance", description: "Read safety, evidence, torque, expiry, and inspection records", group: "Industrial Compliance" },
+      { key: "compliance.manage", label: "Manage compliance", description: "Create checklists, evidence, torque, and inspection records", group: "Industrial Compliance" },
+    ],
+  },
+  {
     group: "Reports & Certificates",
     permissions: [
       { key: "reports.view", label: "View reports", description: "Open dashboard and report cards", group: "Reports & Certificates" },
@@ -123,14 +130,14 @@ const allSeedPermissionKeys = seedPermissionGroups.flatMap((g) => g.permissions.
 const allSeedPhaseKeys: PhaseKey[] = ["broken", "assembly", "tightTorque", "finalTight", "inspectionReady"];
 
 export const seedRoles: RoleModel[] = [
-  { key: "admin", name: "Administrator", subtitle: "Full platform owner and emergency override", members: 2, color: "#38bdf8", permissionKeys: allSeedPermissionKeys, menuKeys: ["dashboard", "projects", "blinds", "access-control", "reports", "audit", "settings"], phaseKeys: allSeedPhaseKeys },
-  { key: "coordinator", name: "Coordinator", subtitle: "Project setup, area control, assignment follow-up", members: 4, color: "#60a5fa", permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "workflow.view", "reports.view", "users.view"], menuKeys: ["dashboard", "projects", "blinds", "reports"], phaseKeys: ["broken"] },
-  { key: "technician", name: "Technician", subtitle: "Field execution and blind status updates", members: 18, color: "#f59e0b", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "qr.manage"], menuKeys: ["dashboard", "blinds"], phaseKeys: ["assembly"] },
-  { key: "qc", name: "QC Inspector", subtitle: "Quality verification and final tightening approval", members: 7, color: "#22c55e", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "audit.view"], menuKeys: ["dashboard", "blinds", "reports", "audit"], phaseKeys: ["finalTight", "inspectionReady"] },
-  { key: "safety", name: "Safety Officer", subtitle: "Safety oversight, restrictions, and compliance review", members: 5, color: "#ef4444", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "reports.view", "audit.view"], menuKeys: ["dashboard", "blinds", "reports", "audit"], phaseKeys: ["broken", "inspectionReady"] },
-  { key: "tiEngineer", name: "T&I Engineer", subtitle: "Torque gate owner and technical validation", members: 6, color: "#eab308", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view"], menuKeys: ["dashboard", "blinds", "reports"], phaseKeys: ["tightTorque"] },
-  { key: "inspection", name: "Inspection Team", subtitle: "Final inspection readiness and certificate package review", members: 9, color: "#3b82f6", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view"], menuKeys: ["dashboard", "blinds", "reports", "audit"], phaseKeys: ["inspectionReady"] },
-  { key: "metalForeman", name: "Metal Foreman", subtitle: "Mechanical supervision and craft-level coordination", members: 3, color: "#94a3b8", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve"], menuKeys: ["dashboard", "blinds"], phaseKeys: ["assembly", "tightTorque"] },
+  { key: "admin", name: "Administrator", subtitle: "Full platform owner and emergency override", members: 2, color: "#38bdf8", permissionKeys: allSeedPermissionKeys, menuKeys: ["dashboard", "projects", "blinds", "compliance", "access-control", "reports", "audit", "settings"], phaseKeys: allSeedPhaseKeys },
+  { key: "coordinator", name: "Coordinator", subtitle: "Project setup, area control, assignment follow-up", members: 4, color: "#60a5fa", permissionKeys: ["projects.view", "projects.create", "projects.edit", "blinds.view", "blinds.create", "blinds.edit", "workflow.view", "reports.view", "users.view", "compliance.view"], menuKeys: ["dashboard", "projects", "blinds", "compliance", "reports"], phaseKeys: ["broken"] },
+  { key: "technician", name: "Technician", subtitle: "Field execution and blind status updates", members: 18, color: "#f59e0b", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "qr.manage", "compliance.view", "compliance.manage"], menuKeys: ["dashboard", "blinds", "compliance"], phaseKeys: ["assembly"] },
+  { key: "qc", name: "QC Inspector", subtitle: "Quality verification and final tightening approval", members: 7, color: "#22c55e", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "audit.view", "compliance.view", "compliance.manage"], menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"], phaseKeys: ["finalTight", "inspectionReady"] },
+  { key: "safety", name: "Safety Officer", subtitle: "Safety oversight, restrictions, and compliance review", members: 5, color: "#ef4444", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "workflow.approve", "reports.view", "audit.view", "compliance.view", "compliance.manage"], menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"], phaseKeys: ["broken", "inspectionReady"] },
+  { key: "tiEngineer", name: "T&I Engineer", subtitle: "Torque gate owner and technical validation", members: 6, color: "#eab308", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "reports.view", "compliance.view", "compliance.manage"], menuKeys: ["dashboard", "blinds", "compliance", "reports"], phaseKeys: ["tightTorque"] },
+  { key: "inspection", name: "Inspection Team", subtitle: "Final inspection readiness and certificate package review", members: 9, color: "#3b82f6", permissionKeys: ["projects.view", "blinds.view", "workflow.view", "reports.view", "audit.view", "compliance.view"], menuKeys: ["dashboard", "blinds", "compliance", "reports", "audit"], phaseKeys: ["inspectionReady"] },
+  { key: "metalForeman", name: "Metal Foreman", subtitle: "Mechanical supervision and craft-level coordination", members: 3, color: "#94a3b8", permissionKeys: ["projects.view", "blinds.view", "blinds.phase.change", "workflow.view", "workflow.approve", "compliance.view", "compliance.manage"], menuKeys: ["dashboard", "blinds", "compliance"], phaseKeys: ["assembly", "tightTorque"] },
 ];
 
 const seedWorkflowTemplates: WorkflowTemplateInput[] = [
@@ -220,32 +227,52 @@ export async function seedAreasAndProjects(): Promise<void> {
 
 export async function seedAccessControl(): Promise<void> {
   const db = await requireDb();
-  const existingPermissions = await db.select({ key: accessPermissions.key }).from(accessPermissions).limit(1);
-  if (existingPermissions.length > 0) return;
+  const [existingPermissions, existingRoles, existingRolePermissions] = await Promise.all([
+    db.select({ key: accessPermissions.key }).from(accessPermissions),
+    db.select({ key: accessRoles.key }).from(accessRoles),
+    db.select({ roleKey: accessRolePermissions.roleKey, permissionKey: accessRolePermissions.permissionKey }).from(accessRolePermissions),
+  ]);
+
+  const existingPermissionKeys = new Set(existingPermissions.map((permission) => permission.key));
+  const existingRoleKeys = new Set(existingRoles.map((role) => role.key));
+  const existingPairs = new Set(existingRolePermissions.map((pair) => `${pair.roleKey}::${pair.permissionKey}`));
+
+  const now = new Date();
+  const permissions = seedPermissionGroups.flatMap((group) => group.permissions);
+  const missingPermissions = permissions.filter((permission) => !existingPermissionKeys.has(permission.key));
+  const missingRoles = seedRoles.filter((role) => !existingRoleKeys.has(role.key));
+  const missingRolePermissions = seedRoles.flatMap((role) =>
+    role.permissionKeys
+      .filter((permissionKey) => !existingPairs.has(`${role.key}::${permissionKey}`))
+      .map((permissionKey) => ({ roleKey: role.key, permissionKey, createdAt: now }))
+  );
+
+  if (missingPermissions.length === 0 && missingRoles.length === 0 && missingRolePermissions.length === 0) return;
+
   await db.transaction(async (tx) => {
-    const now = new Date();
-    const permissions = seedPermissionGroups.flatMap((group) => group.permissions);
-    await tx.insert(accessPermissions).values(
-      permissions.map((permission) => ({ ...permission, createdAt: now, updatedAt: now }))
-    );
-    await tx.insert(accessRoles).values(
-      seedRoles.map((role) => ({
-        key: role.key,
-        name: role.name,
-        subtitle: role.subtitle,
-        members: role.members,
-        color: role.color,
-        menuKeysJson: JSON.stringify(role.menuKeys),
-        phaseKeysJson: JSON.stringify(role.phaseKeys),
-        createdAt: now,
-        updatedAt: now,
-      }))
-    );
-    await tx.insert(accessRolePermissions).values(
-      seedRoles.flatMap((role) =>
-        role.permissionKeys.map((permissionKey) => ({ roleKey: role.key, permissionKey, createdAt: now }))
-      )
-    );
+    if (missingPermissions.length > 0) {
+      await tx.insert(accessPermissions).values(
+        missingPermissions.map((permission) => ({ ...permission, createdAt: now, updatedAt: now }))
+      );
+    }
+    if (missingRoles.length > 0) {
+      await tx.insert(accessRoles).values(
+        missingRoles.map((role) => ({
+          key: role.key,
+          name: role.name,
+          subtitle: role.subtitle,
+          members: role.members,
+          color: role.color,
+          menuKeysJson: JSON.stringify(role.menuKeys),
+          phaseKeysJson: JSON.stringify(role.phaseKeys),
+          createdAt: now,
+          updatedAt: now,
+        }))
+      );
+    }
+    if (missingRolePermissions.length > 0) {
+      await tx.insert(accessRolePermissions).values(missingRolePermissions);
+    }
   });
 }
 
