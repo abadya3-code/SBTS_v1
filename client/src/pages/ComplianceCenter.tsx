@@ -159,9 +159,14 @@ export default function ComplianceCenter() {
         title="Field Compliance Center"
         description="Manage blind expiry, phase safety checklists, photo evidence, torque records, NDE/MTR/gasket/leak-test records, and inspection readiness from one professional workspace."
         actions={
-          <Button type="button" variant="outline" className="rounded-2xl bg-white" onClick={refreshAll}>
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800">
+              <Link href="/field"><Wrench className="h-4 w-4" /> Open Field Mobile</Link>
+            </Button>
+            <Button type="button" variant="outline" className="rounded-2xl bg-white" onClick={refreshAll}>
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
+          </div>
         }
       />
 

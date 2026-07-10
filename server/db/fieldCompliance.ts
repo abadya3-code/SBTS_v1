@@ -1,9 +1,14 @@
+import crypto from "crypto";
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import {
   blindEvidence,
   blindInspectionRecords,
   blindSafetyChecklists,
   blindTorqueRecords,
+  blindRiskAssessments,
+  blindPtwLotoRecords,
+  qrBlindTokens,
+  qrScanLogs,
   blinds,
   projects,
 } from "../../drizzle/schema";
@@ -44,6 +49,56 @@ function parseChecklist(json: string | null | undefined): ChecklistItem[] {
   }
 }
 
+
+
+export type RiskHazardItem = {
+  key: string;
+  label: string;
+  severity: "Low" | "Medium" | "High" | "Critical";
+  selected: boolean;
+  note?: string | null;
+};
+
+export type RiskControlItem = {
+  key: string;
+  label: string;
+  required?: boolean;
+  applied: boolean;
+  note?: string | null;
+};
+
+const defaultRiskHazards: RiskHazardItem[] = [
+  { key: "stored_energy", label: "Stored energy / pressure release", severity: "Critical", selected: true },
+  { key: "hot_surface", label: "Hot surface or high temperature exposure", severity: "High", selected: false },
+  { key: "gas_release", label: "Potential gas / hydrocarbon release", severity: "Critical", selected: true },
+  { key: "line_of_fire", label: "Line of fire during bolting and blind handling", severity: "High", selected: true },
+  { key: "lifting_handling", label: "Manual handling / lifting exposure", severity: "Medium", selected: false },
+  { key: "work_at_height", label: "Work at height or difficult access", severity: "High", selected: false },
+];
+
+const defaultRiskControls: RiskControlItem[] = [
+  { key: "ptw_active", label: "Active PTW verified before work", required: true, applied: false },
+  { key: "loto_verified", label: "LOTO and isolation tags verified", required: true, applied: false },
+  { key: "gas_test", label: "Gas test completed where required", required: true, applied: false },
+  { key: "barrier_signage", label: "Barricade and warning signage installed", required: false, applied: false },
+  { key: "correct_ppe", label: "Correct PPE confirmed for phase hazards", required: true, applied: false },
+  { key: "supervisor_authorized", label: "Supervisor authorization obtained", required: true, applied: false },
+];
+
+function parseJsonArray<T>(json: string | null | undefined, fallback: T[]): T[] {
+  if (!json) return fallback;
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function getDefaultRiskModel() {
+  return { hazards: defaultRiskHazards, controls: defaultRiskControls };
+}
+
 function checklistStatus(items: ChecklistItem[]) {
   const required = items.filter((item) => item.required !== false);
   if (required.length === 0) return "complete";
@@ -56,12 +111,15 @@ export function getDefaultChecklistItems() {
 
 export async function getBlindCompliance(projectId: string, blindTag: string) {
   const db = await requireDb();
-  const [blindRows, evidenceRows, checklistRows, torqueRows, inspectionRows] = await Promise.all([
+  const [blindRows, evidenceRows, checklistRows, torqueRows, inspectionRows, riskRows, ptwLotoRows, qrTokenRows] = await Promise.all([
     db.select().from(blinds).where(and(eq(blinds.projectId, projectId), eq(blinds.tag, blindTag))).limit(1),
     db.select().from(blindEvidence).where(and(eq(blindEvidence.projectId, projectId), eq(blindEvidence.blindTag, blindTag))).orderBy(desc(blindEvidence.createdAt)),
     db.select().from(blindSafetyChecklists).where(and(eq(blindSafetyChecklists.projectId, projectId), eq(blindSafetyChecklists.blindTag, blindTag))).orderBy(asc(blindSafetyChecklists.phase)),
     db.select().from(blindTorqueRecords).where(and(eq(blindTorqueRecords.projectId, projectId), eq(blindTorqueRecords.blindTag, blindTag))).orderBy(desc(blindTorqueRecords.createdAt)),
     db.select().from(blindInspectionRecords).where(and(eq(blindInspectionRecords.projectId, projectId), eq(blindInspectionRecords.blindTag, blindTag))).orderBy(desc(blindInspectionRecords.createdAt)),
+    db.select().from(blindRiskAssessments).where(and(eq(blindRiskAssessments.projectId, projectId), eq(blindRiskAssessments.blindTag, blindTag))).orderBy(desc(blindRiskAssessments.updatedAt)),
+    db.select().from(blindPtwLotoRecords).where(and(eq(blindPtwLotoRecords.projectId, projectId), eq(blindPtwLotoRecords.blindTag, blindTag))).orderBy(desc(blindPtwLotoRecords.updatedAt)),
+    db.select().from(qrBlindTokens).where(and(eq(qrBlindTokens.projectId, projectId), eq(qrBlindTokens.blindTag, blindTag))).orderBy(desc(qrBlindTokens.updatedAt)),
   ]);
 
   const checklistByPhase = checklistRows.map((row) => ({
@@ -75,11 +133,24 @@ export async function getBlindCompliance(projectId: string, blindTag: string) {
     checklists: checklistByPhase,
     torqueRecords: torqueRows,
     inspectionRecords: inspectionRows,
+    riskAssessments: riskRows.map((row) => ({
+      ...row,
+      hazards: parseJsonArray<RiskHazardItem>(row.hazardsJson, defaultRiskHazards),
+      controls: parseJsonArray<RiskControlItem>(row.controlsJson, defaultRiskControls),
+    })),
+    ptwLotoRecords: ptwLotoRows.map((row) => ({
+      ...row,
+      energySources: parseJsonArray<string>(row.energySourcesJson, []),
+    })),
+    qrTokens: qrTokenRows,
     counts: {
       evidence: evidenceRows.length,
       completedChecklists: checklistByPhase.filter((row) => row.status === "complete").length,
       torqueRecords: torqueRows.length,
       inspectionRecords: inspectionRows.length,
+      riskAssessments: riskRows.length,
+      activePtwLoto: ptwLotoRows.filter((row) => row.permitStatus === "Active" || row.isolationStatus === "Verified").length,
+      qrTokens: qrTokenRows.length,
     },
   };
 }
@@ -207,18 +278,156 @@ export async function addInspectionRecord(input: {
   return getBlindCompliance(input.projectId, input.blindTag);
 }
 
+
+
+export async function saveRiskAssessment(input: {
+  projectId: string;
+  blindTag: string;
+  phase: BlindPhase;
+  riskLevel: string;
+  residualRisk: string;
+  hazards: RiskHazardItem[];
+  controls: RiskControlItem[];
+  status?: string;
+  assessorName?: string | null;
+  actor: ComplianceActor;
+}) {
+  const db = await requireDb();
+  await db.insert(blindRiskAssessments).values({
+    projectId: input.projectId,
+    blindTag: input.blindTag,
+    phase: input.phase,
+    riskLevel: input.riskLevel,
+    residualRisk: input.residualRisk,
+    hazardsJson: JSON.stringify(input.hazards),
+    controlsJson: JSON.stringify(input.controls),
+    status: input.status ?? "draft",
+    assessorName: input.assessorName ?? input.actor.name ?? input.actor.email ?? null,
+    createdByOpenId: input.actor.openId,
+    createdByName: input.actor.name ?? input.actor.email ?? null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  return getBlindCompliance(input.projectId, input.blindTag);
+}
+
+export async function addPtwLotoRecord(input: {
+  projectId: string;
+  blindTag: string;
+  phase: BlindPhase;
+  ptwNumber?: string | null;
+  lotoNumber?: string | null;
+  permitStatus?: string;
+  isolationStatus?: string;
+  energySources?: string[];
+  gasTestRequired?: boolean;
+  gasTestResult?: string | null;
+  verifierName?: string | null;
+  expiresAt?: string | Date | null;
+  actor: ComplianceActor;
+}) {
+  const db = await requireDb();
+  await db.insert(blindPtwLotoRecords).values({
+    projectId: input.projectId,
+    blindTag: input.blindTag,
+    phase: input.phase,
+    ptwNumber: input.ptwNumber ?? null,
+    lotoNumber: input.lotoNumber ?? null,
+    permitStatus: input.permitStatus ?? "Pending",
+    isolationStatus: input.isolationStatus ?? "Not verified",
+    energySourcesJson: JSON.stringify(input.energySources ?? []),
+    gasTestRequired: input.gasTestRequired ? 1 : 0,
+    gasTestResult: input.gasTestResult ?? null,
+    verifierName: input.verifierName ?? input.actor.name ?? input.actor.email ?? null,
+    expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    createdByOpenId: input.actor.openId,
+    createdByName: input.actor.name ?? input.actor.email ?? null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  return getBlindCompliance(input.projectId, input.blindTag);
+}
+
+export async function createOrRotateQrToken(input: {
+  projectId: string;
+  blindTag: string;
+  expiresAt?: string | Date | null;
+  actor: ComplianceActor;
+}) {
+  const db = await requireDb();
+  const blindRows = await db.select().from(blinds).where(and(eq(blinds.projectId, input.projectId), eq(blinds.tag, input.blindTag))).limit(1);
+  if (!blindRows[0]) throw new Error("Blind record was not found for QR generation.");
+  const token = `sbts_${crypto.randomBytes(24).toString("base64url")}`;
+  const existing = await db.select({ token: qrBlindTokens.token }).from(qrBlindTokens)
+    .where(and(eq(qrBlindTokens.projectId, input.projectId), eq(qrBlindTokens.blindTag, input.blindTag)))
+    .limit(1);
+  const values = {
+    token,
+    projectId: input.projectId,
+    blindTag: input.blindTag,
+    accessMode: "field_readonly",
+    expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+    isActive: 1,
+    scanCount: 0,
+    lastScannedAt: null,
+    createdByOpenId: input.actor.openId,
+    createdByName: input.actor.name ?? input.actor.email ?? null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  if (existing[0]) {
+    await db.update(qrBlindTokens).set(values).where(eq(qrBlindTokens.token, existing[0].token));
+  } else {
+    await db.insert(qrBlindTokens).values(values);
+  }
+  return getBlindCompliance(input.projectId, input.blindTag);
+}
+
+export async function verifyQrToken(input: {
+  token: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const db = await requireDb();
+  const rows = await db.select().from(qrBlindTokens).where(eq(qrBlindTokens.token, input.token)).limit(1);
+  const tokenRow = rows[0];
+  if (!tokenRow) {
+    await db.insert(qrScanLogs).values({ token: input.token, result: "invalid", ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, scannedAt: new Date() });
+    return { status: "invalid" as const, message: "QR token was not found.", token: null, compliance: null };
+  }
+  const expired = tokenRow.expiresAt ? new Date(tokenRow.expiresAt).getTime() < Date.now() : false;
+  const active = tokenRow.isActive === 1 && !expired;
+  await db.insert(qrScanLogs).values({
+    token: input.token,
+    projectId: tokenRow.projectId,
+    blindTag: tokenRow.blindTag,
+    result: active ? "success" : expired ? "expired" : "inactive",
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    scannedAt: new Date(),
+  });
+  await db.update(qrBlindTokens).set({ scanCount: (tokenRow.scanCount ?? 0) + 1, lastScannedAt: new Date(), updatedAt: new Date() }).where(eq(qrBlindTokens.token, tokenRow.token));
+  if (!active) {
+    return { status: expired ? "expired" as const : "inactive" as const, message: expired ? "QR token is expired." : "QR token is inactive.", token: tokenRow, compliance: null };
+  }
+  return { status: "success" as const, message: "QR token verified.", token: tokenRow, compliance: await getBlindCompliance(tokenRow.projectId, tokenRow.blindTag) };
+}
+
 export async function getComplianceSummary(days = 30) {
   const db = await requireDb();
   const today = new Date();
   const horizon = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
   const horizonText = horizon.toISOString().slice(0, 10);
-  const [blindRows, evidenceRows, checklistRows, torqueRows, inspectionRows, projectRows] = await Promise.all([
+  const [blindRows, evidenceRows, checklistRows, torqueRows, inspectionRows, projectRows, riskRows, ptwLotoRows, qrTokenRows] = await Promise.all([
     db.select().from(blinds).orderBy(asc(blinds.expiryDate)),
     db.select().from(blindEvidence).orderBy(desc(blindEvidence.createdAt)).limit(25),
     db.select().from(blindSafetyChecklists),
     db.select().from(blindTorqueRecords).orderBy(desc(blindTorqueRecords.createdAt)).limit(25),
     db.select().from(blindInspectionRecords).orderBy(desc(blindInspectionRecords.createdAt)).limit(25),
     db.select().from(projects),
+    db.select().from(blindRiskAssessments).orderBy(desc(blindRiskAssessments.updatedAt)).limit(25),
+    db.select().from(blindPtwLotoRecords).orderBy(desc(blindPtwLotoRecords.updatedAt)).limit(25),
+    db.select().from(qrBlindTokens).orderBy(desc(qrBlindTokens.updatedAt)).limit(25),
   ]);
   const projectById = new Map(projectRows.map((project) => [project.id, project]));
   const expiring = blindRows
@@ -250,9 +459,15 @@ export async function getComplianceSummary(days = 30) {
       incompleteChecklists: checklistRows.filter((row) => row.status !== "complete").length,
       torqueRecords: torqueRows.length,
       inspectionRecords: inspectionRows.length,
+      riskAssessments: riskRows.length,
+      activePtwLoto: ptwLotoRows.filter((row) => row.permitStatus === "Active" || row.isolationStatus === "Verified").length,
+      activeQrTokens: qrTokenRows.filter((row) => row.isActive === 1).length,
     },
     latestEvidence: evidenceRows,
     latestTorque: torqueRows,
     latestInspection: inspectionRows,
+    latestRiskAssessments: riskRows,
+    latestPtwLoto: ptwLotoRows,
+    latestQrTokens: qrTokenRows,
   };
 }

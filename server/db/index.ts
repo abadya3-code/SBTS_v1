@@ -200,9 +200,14 @@ export {
 export {
   addBlindEvidence,
   addInspectionRecord,
+  addPtwLotoRecord,
   addTorqueRecord,
+  createOrRotateQrToken,
   getBlindCompliance,
   getComplianceSummary,
   getDefaultChecklistItems,
+  getDefaultRiskModel,
+  saveRiskAssessment,
   saveSafetyChecklist,
+  verifyQrToken,
 } from "./fieldCompliance";

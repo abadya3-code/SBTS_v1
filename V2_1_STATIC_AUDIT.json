@@ -1,0 +1,50 @@
+{
+  "version": "2.1.0",
+  "missingLocalImports": [],
+  "arabicExecutableFiles": [],
+  "routeCount": 25,
+  "routes": [
+    "/login",
+    "/register",
+    "/approve",
+    "/certificate/:projectId/:tag",
+    "/qr/blind/:token",
+    "/",
+    "/dashboard",
+    "/areas",
+    "/areas/:areaId/projects/:projectId/blinds/:tag",
+    "/areas/:areaId/projects/:projectId",
+    "/areas/:areaId/projects",
+    "/projects/:projectId/blinds/:tag",
+    "/projects/:projectId",
+    "/projects",
+    "/blinds",
+    "/workflow-studio",
+    "/access-control",
+    "/users",
+    "/settings",
+    "/notifications",
+    "/reports",
+    "/audit",
+    "/compliance",
+    "/field",
+    "/profile"
+  ],
+  "newTables": [
+    "qr_blind_tokens",
+    "qr_scan_logs",
+    "blind_risk_assessments",
+    "blind_ptw_loto_records"
+  ],
+  "newRoutes": [
+    "/field",
+    "/qr/blind/:token"
+  ],
+  "newProcedures": [
+    "fieldCompliance.defaultRiskModel",
+    "fieldCompliance.createQrToken",
+    "fieldCompliance.verifyQrToken",
+    "fieldCompliance.saveRiskAssessment",
+    "fieldCompliance.addPtwLoto"
+  ]
+}

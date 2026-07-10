@@ -1,15 +1,20 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { permissionProcedure, router } from "../_core/trpc";
+import { permissionProcedure, publicProcedure, router } from "../_core/trpc";
 import {
   addBlindEvidence,
   addInspectionRecord,
+  addPtwLotoRecord,
   addTorqueRecord,
+  createOrRotateQrToken,
   getBlindCompliance,
   getComplianceSummary,
   getDefaultChecklistItems,
+  getDefaultRiskModel,
   logAuditEvent,
+  saveRiskAssessment,
   saveSafetyChecklist,
+  verifyQrToken,
 } from "../db";
 
 const blindPhaseSchema = z.enum([
@@ -115,6 +120,78 @@ export const fieldComplianceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const result = await addTorqueRecord({ ...input, actor: actorFromContext(ctx) });
       await writeAudit(ctx, "compliance.torque.add", input.blindTag, { projectId: input.projectId, torqueValue: input.torqueValue, torqueUnit: input.torqueUnit });
+      return result;
+    }),
+
+
+  defaultRiskModel: permissionProcedure("compliance.view").query(async () => getDefaultRiskModel()),
+
+  createQrToken: permissionProcedure("compliance.manage")
+    .input(z.object({
+      projectId: z.string().min(2).max(40),
+      blindTag: z.string().min(2).max(40),
+      expiresAt: z.coerce.date().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await createOrRotateQrToken({ ...input, actor: actorFromContext(ctx) });
+      await writeAudit(ctx, "compliance.qr.rotate", input.blindTag, { projectId: input.projectId, expiresAt: input.expiresAt ?? null });
+      return result;
+    }),
+
+  verifyQrToken: publicProcedure
+    .input(z.object({ token: z.string().min(10).max(120) }))
+    .query(async ({ ctx, input }) => {
+      return verifyQrToken({ token: input.token, ...requestAuditMeta(ctx) });
+    }),
+
+  saveRiskAssessment: permissionProcedure("compliance.manage")
+    .input(z.object({
+      projectId: z.string().min(2).max(40),
+      blindTag: z.string().min(2).max(40),
+      phase: blindPhaseSchema,
+      riskLevel: z.enum(["Low", "Medium", "High", "Critical"]).default("Medium"),
+      residualRisk: z.enum(["Low", "Medium", "High", "Critical"]).default("Medium"),
+      status: z.enum(["draft", "reviewed", "approved"]).default("draft"),
+      assessorName: z.string().max(200).nullable().optional(),
+      hazards: z.array(z.object({
+        key: z.string().min(1).max(80),
+        label: z.string().min(1).max(220),
+        severity: z.enum(["Low", "Medium", "High", "Critical"]),
+        selected: z.boolean(),
+        note: z.string().max(500).nullable().optional(),
+      })).min(1).max(50),
+      controls: z.array(z.object({
+        key: z.string().min(1).max(80),
+        label: z.string().min(1).max(220),
+        required: z.boolean().optional(),
+        applied: z.boolean(),
+        note: z.string().max(500).nullable().optional(),
+      })).min(1).max(50),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await saveRiskAssessment({ ...input, actor: actorFromContext(ctx) });
+      await writeAudit(ctx, "compliance.risk_assessment.save", input.blindTag, { projectId: input.projectId, phase: input.phase, riskLevel: input.riskLevel, residualRisk: input.residualRisk });
+      return result;
+    }),
+
+  addPtwLoto: permissionProcedure("compliance.manage")
+    .input(z.object({
+      projectId: z.string().min(2).max(40),
+      blindTag: z.string().min(2).max(40),
+      phase: blindPhaseSchema,
+      ptwNumber: z.string().max(120).nullable().optional(),
+      lotoNumber: z.string().max(120).nullable().optional(),
+      permitStatus: z.enum(["Pending", "Active", "Closed", "Suspended"]).default("Pending"),
+      isolationStatus: z.enum(["Not verified", "Verified", "Rejected", "Expired"]).default("Not verified"),
+      energySources: z.array(z.string().max(120)).max(20).default([]),
+      gasTestRequired: z.boolean().default(false),
+      gasTestResult: z.string().max(120).nullable().optional(),
+      verifierName: z.string().max(200).nullable().optional(),
+      expiresAt: z.coerce.date().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await addPtwLotoRecord({ ...input, actor: actorFromContext(ctx) });
+      await writeAudit(ctx, "compliance.ptw_loto.add", input.blindTag, { projectId: input.projectId, phase: input.phase, permitStatus: input.permitStatus, isolationStatus: input.isolationStatus });
       return result;
     }),
 

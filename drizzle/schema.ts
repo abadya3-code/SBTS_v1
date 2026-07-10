@@ -709,3 +709,82 @@ export type InsertBlindTorqueRecord = typeof blindTorqueRecords.$inferInsert;
 export type BlindInspectionRecordRow = typeof blindInspectionRecords.$inferSelect;
 export type InsertBlindInspectionRecord = typeof blindInspectionRecords.$inferInsert;
 
+/** QR tokens for field verification. Tokens can be printed on tags and scanned from mobile. */
+export const qrBlindTokens = mysqlTable("qr_blind_tokens", {
+  token: varchar("token", { length: 96 }).primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  accessMode: varchar("accessMode", { length: 40 }).default("field_readonly").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  isActive: int("isActive").default(1).notNull(),
+  scanCount: int("scanCount").default(0).notNull(),
+  lastScannedAt: timestamp("lastScannedAt"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectBlindTokenUnique: uniqueIndex("project_blind_token_unique").on(table.projectId, table.blindTag),
+}));
+
+/** QR scan log for field verification traceability. */
+export const qrScanLogs = mysqlTable("qr_scan_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 96 }).notNull(),
+  blindTag: varchar("blindTag", { length: 40 }),
+  projectId: varchar("projectId", { length: 40 }),
+  result: varchar("result", { length: 80 }).default("unknown").notNull(),
+  ipAddress: varchar("ipAddress", { length: 80 }),
+  userAgent: varchar("userAgent", { length: 500 }),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+});
+
+/** Risk assessment per blind/phase. */
+export const blindRiskAssessments = mysqlTable("blind_risk_assessments", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  phase: blindPhaseEnum.default("Broken / Preparation").notNull(),
+  riskLevel: varchar("riskLevel", { length: 40 }).default("Medium").notNull(),
+  residualRisk: varchar("residualRisk", { length: 40 }).default("Medium").notNull(),
+  hazardsJson: text("hazardsJson").notNull(),
+  controlsJson: text("controlsJson").notNull(),
+  status: varchar("status", { length: 40 }).default("draft").notNull(),
+  assessorName: varchar("assessorName", { length: 200 }),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** PTW / LOTO record per blind/phase. */
+export const blindPtwLotoRecords = mysqlTable("blind_ptw_loto_records", {
+  id: int("id").autoincrement().primaryKey(),
+  blindTag: varchar("blindTag", { length: 40 }).notNull().references(() => blinds.tag),
+  projectId: varchar("projectId", { length: 40 }).notNull().references(() => projects.id),
+  phase: blindPhaseEnum.default("Broken / Preparation").notNull(),
+  ptwNumber: varchar("ptwNumber", { length: 120 }),
+  lotoNumber: varchar("lotoNumber", { length: 120 }),
+  permitStatus: varchar("permitStatus", { length: 80 }).default("Pending").notNull(),
+  isolationStatus: varchar("isolationStatus", { length: 80 }).default("Not verified").notNull(),
+  energySourcesJson: text("energySourcesJson"),
+  gasTestRequired: int("gasTestRequired").default(0).notNull(),
+  gasTestResult: varchar("gasTestResult", { length: 120 }),
+  verifierName: varchar("verifierName", { length: 200 }),
+  expiresAt: timestamp("expiresAt"),
+  createdByOpenId: varchar("createdByOpenId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QrBlindTokenRow = typeof qrBlindTokens.$inferSelect;
+export type InsertQrBlindToken = typeof qrBlindTokens.$inferInsert;
+export type QrScanLogRow = typeof qrScanLogs.$inferSelect;
+export type InsertQrScanLog = typeof qrScanLogs.$inferInsert;
+export type BlindRiskAssessmentRow = typeof blindRiskAssessments.$inferSelect;
+export type InsertBlindRiskAssessment = typeof blindRiskAssessments.$inferInsert;
+export type BlindPtwLotoRecordRow = typeof blindPtwLotoRecords.$inferSelect;
+export type InsertBlindPtwLotoRecord = typeof blindPtwLotoRecords.$inferInsert;
+
+

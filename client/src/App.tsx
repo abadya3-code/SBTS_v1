@@ -27,6 +27,8 @@ import Reports from "./pages/Reports";
 import UserProfile from "./pages/UserProfile";
 import AuditCenter from "./pages/AuditCenter";
 import ComplianceCenter from "./pages/ComplianceCenter";
+import FieldExecutionCenter from "./pages/FieldExecutionCenter";
+import FieldVerification from "./pages/FieldVerification";
 import { Route, Switch } from "wouter";
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -37,6 +39,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/approve" component={Approve} />
       <Route path="/certificate/:projectId/:tag" component={BlindCertificate} />
+      <Route path="/qr/blind/:token" component={FieldVerification} />
       {/* Protected routes - inside AppShell */}
       <Route>
     <AppShell>
@@ -59,6 +62,7 @@ function Router() {
         <Route path="/reports" component={Reports} />
         <Route path="/audit" component={AuditCenter} />
         <Route path="/compliance" component={ComplianceCenter} />
+        <Route path="/field" component={FieldExecutionCenter} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>
